@@ -1,5 +1,8 @@
 package com.netopyr.megastore.crdt;
 
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 import rx.Observable;
 
 import java.util.AbstractSet;
@@ -60,12 +63,46 @@ public class ORSet<T> extends AbstractSet<T> implements ObservableSet<T> {
         tombstone.addAll(remove);
     }
 
-    private static class Element<U> {
+    private final static class Element<U> {
         private final U value;
-        private final UUID uid = UUID.randomUUID();
+        private final UUID uid;
 
-        private Element(U value) {
+        private Element(U value, UUID uid) {
             this.value = value;
+            this.uid = uid;
+        }
+        private Element(U value) {
+            this(value, UUID.randomUUID());
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+
+            if (o == null || getClass() != o.getClass()) return false;
+
+            Element<?> element = (Element<?>) o;
+
+            return new EqualsBuilder()
+                    .append(value, element.value)
+                    .append(uid, element.uid)
+                    .isEquals();
+        }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(17, 37)
+                    .append(value)
+                    .append(uid)
+                    .toHashCode();
+        }
+
+        @Override
+        public String toString() {
+            return new ToStringBuilder(this)
+                    .append("value", value)
+                    .append("uid", uid)
+                    .toString();
         }
     }
 
