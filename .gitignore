@@ -1,1 +1,8 @@
+.idea
 *.iml
+*.ipr
+*.iws
+build/
+out/
+target/
+dist/
