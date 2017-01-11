@@ -2,26 +2,26 @@ package com.netopyr.megastore.crdt.orset;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
-import com.netopyr.megastore.crdt.ObservableSet;
 import com.netopyr.megastore.replica.Replica;
-import rx.Observable;
-import rx.subjects.PublishSubject;
-import rx.subjects.Subject;
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
+import io.reactivex.subjects.Subject;
 
 import java.util.AbstractSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class ORSet<T> extends AbstractSet<T> implements Crdt, ObservableSet<T> {
+public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T> */ {
 
     private final String id;
     private final Set<Element<T>> elements = new HashSet<>();
     private final Set<Element<T>> tombstone = new HashSet<>();
-    private final Subject<CrdtCommand, CrdtCommand> commands = PublishSubject.create();
+    private final Subject<CrdtCommand> commands = PublishSubject.create();
 
 
     public ORSet(Replica replica, String id) {
@@ -30,9 +30,22 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt, ObservableSet<T> {
         replica.register(this);
     }
 
+
+    @Override
     public String getId() {
         return id;
     }
+
+    @Override
+    public Observable<CrdtCommand> onCommand() {
+        return commands;
+    }
+
+    @Override
+    public BiFunction<Replica, String, Crdt> getFactory() {
+        return ORSet::new;
+    }
+
 
     @Override
     public int size() {
@@ -52,15 +65,9 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt, ObservableSet<T> {
     }
 
 
-    @Override
-    public Observable<CrdtCommand> onCommands() {
-        return commands.asObservable();
-    }
-
-
-    public Observable<Change> onChange() {
-        throw new UnsupportedOperationException("Not implemented yet");
-    }
+//    public Observable<Change> onChange() {
+//        throw new UnsupportedOperationException("Not implemented yet");
+//    }
 
 
     private static <U> Predicate<Element<U>> matches(U value) {

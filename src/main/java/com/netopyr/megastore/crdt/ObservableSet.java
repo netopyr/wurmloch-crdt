@@ -1,6 +1,6 @@
 package com.netopyr.megastore.crdt;
 
-import rx.Observable;
+import io.reactivex.Observable;
 
 import java.util.Set;
 

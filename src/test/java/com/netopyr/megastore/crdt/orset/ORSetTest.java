@@ -2,12 +2,12 @@ package com.netopyr.megastore.crdt.orset;
 
 import com.netopyr.megastore.crdt.CrdtCommand;
 import com.netopyr.megastore.replica.Replica;
+import io.reactivex.Observable;
+import io.reactivex.observers.TestObserver;
+import io.reactivex.subjects.ReplaySubject;
+import io.reactivex.subjects.Subject;
 import org.mockito.Mockito;
 import org.testng.annotations.Test;
-import rx.Observable;
-import rx.observers.TestObserver;
-import rx.subjects.ReplaySubject;
-import rx.subjects.Subject;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -158,7 +158,7 @@ public class ORSetTest {
 
         final ORSet<String> set = new ORSet<>(replica, "ID");
         final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommands().subscribe(observer);
+        set.onCommand().subscribe(observer);
 
         // when:
         set.add("1");
@@ -166,9 +166,9 @@ public class ORSetTest {
         set.add("1");
 
         // then:
-        assertThat(observer.getOnCompletedEvents(), empty());
-        assertThat(observer.getOnErrorEvents(), empty());
-        assertThat(observer.getOnNextEvents(), contains(
+        observer.assertNotComplete();
+        observer.assertNoErrors();
+        assertThat(observer.values(), contains(
                 new AddCommandMatcher<>(set.getId(), "1"),
                 new AddCommandMatcher<>(set.getId(), "2"),
                 new AddCommandMatcher<>(set.getId(), "1")
@@ -183,7 +183,7 @@ public class ORSetTest {
 
         final ORSet<String> set = new ORSet<>(replica, "ID");
         final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommands().subscribe(observer);
+        set.onCommand().subscribe(observer);
 
         set.add("1");
         set.add("1");
@@ -194,9 +194,9 @@ public class ORSetTest {
         it.remove();
 
         // then:
-        assertThat(observer.getOnCompletedEvents(), empty());
-        assertThat(observer.getOnErrorEvents(), empty());
-        assertThat(observer.getOnNextEvents(), contains(
+        observer.assertNotComplete();
+        observer.assertNoErrors();
+        assertThat(observer.values(), contains(
                 new AddCommandMatcher<>(set.getId(), "1"),
                 new AddCommandMatcher<>(set.getId(), "1"),
                 new RemoveCommandMatcher<>(set.getId(), "1", "1")
@@ -207,12 +207,12 @@ public class ORSetTest {
     public void shouldHandleAddCommands() {
         // given:
         final Replica replica = Mockito.mock(Replica.class);
-        final Subject<CrdtCommand, CrdtCommand> inputStream = ReplaySubject.create();
-        when(replica.onCommands(any())).thenReturn(inputStream.asObservable());
+        final Subject<CrdtCommand> inputStream = ReplaySubject.create();
+        when(replica.onCommands(any())).thenReturn(inputStream);
 
         final ORSet<String> set = new ORSet<>(replica, "ID");
         final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommands().subscribe(observer);
+        set.onCommand().subscribe(observer);
 
         final AddCommand<String> command1 = new AddCommand<>(set.getId(), new Element<>("1", UUID.randomUUID()));
         final AddCommand<String> command2 = new AddCommand<>(set.getId(), new Element<>("2", UUID.randomUUID()));
@@ -225,21 +225,21 @@ public class ORSetTest {
 
         // then:
         assertThat(set, hasSize(2));
-        assertThat(observer.getOnCompletedEvents(), empty());
-        assertThat(observer.getOnErrorEvents(), empty());
-        assertThat(observer.getOnNextEvents(), empty());
+        observer.assertNotComplete();
+        observer.assertNoErrors();
+        observer.assertNoValues();
     }
 
     @Test
     public void shouldHandleRemoveCommands() {
         // given:
         final Replica replica = Mockito.mock(Replica.class);
-        final Subject<CrdtCommand, CrdtCommand> inputStream = ReplaySubject.create();
-        when(replica.onCommands(any())).thenReturn(inputStream.asObservable());
+        final Subject<CrdtCommand> inputStream = ReplaySubject.create();
+        when(replica.onCommands(any())).thenReturn(inputStream);
 
         final ORSet<String> set = new ORSet<>(replica, "ID");
         final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommands().subscribe(observer);
+        set.onCommand().subscribe(observer);
 
         final Element<String> elem1 = new Element<>("1", UUID.randomUUID());
         final Element<String> elem2 = new Element<>("1", UUID.randomUUID());
@@ -255,21 +255,21 @@ public class ORSetTest {
 
         // then:
         assertThat(set, empty());
-        assertThat(observer.getOnCompletedEvents(), empty());
-        assertThat(observer.getOnErrorEvents(), empty());
-        assertThat(observer.getOnNextEvents(), empty());
+        observer.assertNotComplete();
+        observer.assertNoErrors();
+        observer.assertNoValues();
     }
 
     @Test
     public void shouldHandleDuplicateCommands() {
         // given:
         final Replica replica = Mockito.mock(Replica.class);
-        final Subject<CrdtCommand, CrdtCommand> inputStream = ReplaySubject.create();
-        when(replica.onCommands(any())).thenReturn(inputStream.asObservable());
+        final Subject<CrdtCommand> inputStream = ReplaySubject.create();
+        when(replica.onCommands(any())).thenReturn(inputStream);
 
         final ORSet<String> set = new ORSet<>(replica, "ID");
         final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommands().subscribe(observer);
+        set.onCommand().subscribe(observer);
 
         final AddCommand<String> command = new AddCommand<>(set.getId(), new Element<>("1", UUID.randomUUID()));
 
@@ -279,9 +279,9 @@ public class ORSetTest {
 
         // then:
         assertThat(set, hasSize(1));
-        assertThat(observer.getOnCompletedEvents(), empty());
-        assertThat(observer.getOnErrorEvents(), empty());
-        assertThat(observer.getOnNextEvents(), empty());
+        observer.assertNotComplete();
+        observer.assertNoErrors();
+        observer.assertNoValues();
     }
 
     @Test

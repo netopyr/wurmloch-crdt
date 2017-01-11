@@ -2,19 +2,22 @@ package com.netopyr.megastore.replica;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
-import rx.Observable;
+import io.reactivex.Observable;
+import javaslang.control.Option;
 
-import java.util.Optional;
+import java.util.Objects;
 
 public interface Replica {
 
+    String getId();
+
     void register(Crdt crdt);
 
-    Optional<? extends Crdt> find(String id);
+    Option<? extends Crdt> find(String id);
 
     Observable<CrdtCommand> onCommands();
 
     default Observable<CrdtCommand> onCommands(Crdt crdt) {
-        return onCommands().filter(command -> crdt.getId() == null || crdt.getId().equals(command.getCrdtId()));
+        return onCommands().filter(command -> Objects.equals(crdt.getId(), command.getCrdtId()));
     }
 }

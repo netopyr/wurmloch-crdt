@@ -2,19 +2,21 @@ package com.netopyr.megastore.replica;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
+import io.reactivex.Observable;
+import io.reactivex.subjects.PublishSubject;
+import io.reactivex.subjects.Subject;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import rx.Observable;
-import rx.subjects.PublishSubject;
-import rx.subjects.Subject;
 
-public class SimpleCrdt implements Crdt {
+import java.util.function.BiFunction;
+
+class SimpleCrdt implements Crdt {
 
     private final String id;
-    private final transient Subject<CrdtCommand, CrdtCommand> stream = PublishSubject.create();
+    private final transient Subject<CrdtCommand> stream = PublishSubject.create();
 
-    public SimpleCrdt(Replica replica, String id) {
+    SimpleCrdt(String id) {
         this.id = id;
     }
 
@@ -24,8 +26,13 @@ public class SimpleCrdt implements Crdt {
     }
 
     @Override
-    public Observable<CrdtCommand> onCommands() {
-        return stream.asObservable();
+    public Observable<CrdtCommand> onCommand() {
+        return stream;
+    }
+
+    @Override
+    public BiFunction<Replica, String, Crdt> getFactory() {
+        return (replica, id) -> new SimpleCrdt(id);
     }
 
     public void sendCommands(CrdtCommand... commands) {
