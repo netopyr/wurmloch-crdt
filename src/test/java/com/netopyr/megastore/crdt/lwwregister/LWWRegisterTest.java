@@ -3,7 +3,9 @@ package com.netopyr.megastore.crdt.lwwregister;
 import com.netopyr.megastore.replica.LocalReplica;
 import org.testng.annotations.Test;
 
-import static com.netopyr.caj.Caj.expect;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.nullValue;
 
 public class LWWRegisterTest {
 
@@ -25,20 +27,20 @@ public class LWWRegisterTest {
         final String v0 = register.get();
 
         // then
-        expect(v0).to.be(null);
+        assertThat(v0, is(nullValue()));
 
         // when
         register.set("Hello World");
         final String v1 = register.get();
 
         // then
-        expect(v1).to.equal("Hello World");
+        assertThat(v1, is("Hello World"));
 
         // when
         register.set("Goodbye World");
         final String v2 = register.get();
 
         // then
-        expect(v2).to.equal("Goodbye World");
+        assertThat(v2, is("Goodbye World"));
     }
 }
