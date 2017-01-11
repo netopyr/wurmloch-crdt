@@ -8,8 +8,10 @@ import io.reactivex.subjects.PublishSubject;
 import io.reactivex.subjects.Subject;
 
 import java.util.AbstractSet;
+import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.BiFunction;
@@ -65,13 +67,8 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
     }
 
 
-//    public Observable<Change> onChange() {
-//        throw new UnsupportedOperationException("Not implemented yet");
-//    }
-
-
     private static <U> Predicate<Element<U>> matches(U value) {
-        return element -> value == null ? element.getValue() == null : value.equals(element.getValue());
+        return element -> Objects.equals(value, element.getValue());
     }
 
     private synchronized boolean doContains(T value) {
@@ -79,7 +76,7 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
     }
 
     private synchronized Set<T> doElements() {
-        return elements.parallelStream().map(Element::getValue).collect(Collectors.toCollection(HashSet::new));
+        return elements.parallelStream().map(Element::getValue).collect(Collectors.toSet());
     }
 
     private synchronized void prepareAdd(T value) {
@@ -99,7 +96,7 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
         doRemove(removes);
     }
 
-    private synchronized void doRemove(Set<Element<T>> removes) {
+    private synchronized void doRemove(Collection<Element<T>> removes) {
         elements.removeAll(removes);
         tombstone.addAll(removes);
     }
