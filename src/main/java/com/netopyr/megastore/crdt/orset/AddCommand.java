@@ -44,6 +44,7 @@ final class AddCommand<T> extends CrdtCommand {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+                .appendSuper(super.toString())
                 .append("crdtId", getCrdtId())
                 .append("element", element)
                 .toString();

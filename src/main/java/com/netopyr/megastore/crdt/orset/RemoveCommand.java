@@ -46,6 +46,7 @@ final class RemoveCommand<T> extends CrdtCommand {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
+                .appendSuper(super.toString())
                 .append("crdtId", getCrdtId())
                 .append("elements", elements)
                 .toString();
