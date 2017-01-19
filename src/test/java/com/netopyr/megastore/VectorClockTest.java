@@ -11,6 +11,9 @@ import static org.hamcrest.Matchers.lessThan;
 
 public class VectorClockTest {
 
+    public static final String ID_1 = "ID_1";
+    public static final String ID_2 = "ID_2";
+
     @Test
     public void shouldBeEqualToItself() {
         // given
@@ -20,13 +23,13 @@ public class VectorClockTest {
         assertThat(vectorClock0.compareTo(vectorClock0), is(0));
 
         // when
-        final VectorClock vectorClock1 = vectorClock0.increment("ID_1");
+        final VectorClock vectorClock1 = vectorClock0.increment(ID_1);
 
         // then
         assertThat(vectorClock1.compareTo(vectorClock1), is(0));
 
         // when
-        final VectorClock vectorClock11 = vectorClock1.increment("ID_1");
+        final VectorClock vectorClock11 = vectorClock1.increment(ID_1);
 
         // then
         assertThat(vectorClock11.compareTo(vectorClock11), is(0));
@@ -45,7 +48,7 @@ public class VectorClockTest {
         assertThat(mergedClock0.compareTo(vectorClock0), is(0));
 
         // when
-        final VectorClock vectorClock1 = vectorClock0.increment("ID_1");
+        final VectorClock vectorClock1 = vectorClock0.increment(ID_1);
         final VectorClock mergedClock1 = vectorClock1.merge(vectorClock1);
 
         // then
@@ -53,7 +56,7 @@ public class VectorClockTest {
         assertThat(mergedClock1.compareTo(vectorClock1), is(0));
 
         // when
-        final VectorClock vectorClock11 = vectorClock1.increment("ID_1");
+        final VectorClock vectorClock11 = vectorClock1.increment(ID_1);
         final VectorClock mergedClock11 = vectorClock11.merge(vectorClock11);
 
         // then
@@ -95,8 +98,8 @@ public class VectorClockTest {
         final VectorClock vectorClock1 = new VectorClock();
 
         // when
-        final VectorClock vectorClock2 = vectorClock1.increment("ID_1");
-        final VectorClock vectorClock3 = vectorClock2.increment("ID_1");
+        final VectorClock vectorClock2 = vectorClock1.increment(ID_1);
+        final VectorClock vectorClock3 = vectorClock2.increment(ID_1);
 
         // then
         assertThat(vectorClock1.compareTo(vectorClock1), is(equalTo(0)));
@@ -116,8 +119,8 @@ public class VectorClockTest {
     public void shouldBeEqualToGreaterWhenMerged() {
         // given
         final VectorClock vectorClock1 = new VectorClock();
-        final VectorClock vectorClock2 = vectorClock1.increment("ID_1");
-        final VectorClock vectorClock3 = vectorClock2.increment("ID_1");
+        final VectorClock vectorClock2 = vectorClock1.increment(ID_1);
+        final VectorClock vectorClock3 = vectorClock2.increment(ID_1);
 
         // when
         final VectorClock mergedClock1_2 = vectorClock1.merge(vectorClock2);
@@ -183,10 +186,10 @@ public class VectorClockTest {
         final VectorClock vectorClock0 = new VectorClock();
 
         // when
-        final VectorClock vectorClock1 = vectorClock0.increment("ID_1");
-        final VectorClock vectorClock11 = vectorClock1.increment("ID_1");
-        final VectorClock vectorClock2 = vectorClock0.increment("ID_2");
-        final VectorClock vectorClock22 = vectorClock2.increment("ID_2");
+        final VectorClock vectorClock1 = vectorClock0.increment(ID_1);
+        final VectorClock vectorClock11 = vectorClock1.increment(ID_1);
+        final VectorClock vectorClock2 = vectorClock0.increment(ID_2);
+        final VectorClock vectorClock22 = vectorClock2.increment(ID_2);
 
         // then
         assertThat(vectorClock0.compareTo(vectorClock1), is(lessThan(0)));
@@ -219,8 +222,8 @@ public class VectorClockTest {
     public void shouldBeGreaterWhenIncrementedAtDifferentNodesAndMerged() {
         // given
         final VectorClock vectorClock0 = new VectorClock();
-        final VectorClock vectorClock1 = vectorClock0.increment("ID_1");
-        final VectorClock vectorClock2 = vectorClock0.increment("ID_2");
+        final VectorClock vectorClock1 = vectorClock0.increment(ID_1);
+        final VectorClock vectorClock2 = vectorClock0.increment(ID_2);
 
         // when
         final VectorClock mergedClock1_2 = vectorClock1.merge(vectorClock2);
@@ -249,16 +252,16 @@ public class VectorClockTest {
     public void shouldBeGreaterWhenMergedAndIncrementedAtDifferentNodes() {
         // given
         final VectorClock vectorClock0 = new VectorClock();
-        final VectorClock vectorClock1 = vectorClock0.increment("ID_1");
-        final VectorClock vectorClock2 = vectorClock0.increment("ID_2");
+        final VectorClock vectorClock1 = vectorClock0.increment(ID_1);
+        final VectorClock vectorClock2 = vectorClock0.increment(ID_2);
         final VectorClock mergedClock1_2 = vectorClock1.merge(vectorClock2);
         final VectorClock mergedClock2_1 = vectorClock2.merge(vectorClock1);
 
         // when
-        final VectorClock clock1_2_1 = mergedClock1_2.increment("ID_1");
-        final VectorClock clock1_2_2 = mergedClock1_2.increment("ID_2");
-        final VectorClock clock2_1_1 = mergedClock2_1.increment("ID_1");
-        final VectorClock clock2_1_2 = mergedClock2_1.increment("ID_2");
+        final VectorClock clock1_2_1 = mergedClock1_2.increment(ID_1);
+        final VectorClock clock1_2_2 = mergedClock1_2.increment(ID_2);
+        final VectorClock clock2_1_1 = mergedClock2_1.increment(ID_1);
+        final VectorClock clock2_1_2 = mergedClock2_1.increment(ID_2);
 
         // then
         assertThat(mergedClock1_2.compareTo(clock1_2_1), is(lessThan(0)));
@@ -300,7 +303,42 @@ public class VectorClockTest {
         assertThat(clock2_1_2.compareTo(clock1_2_2), is(equalTo(0)));
         assertThat(clock2_1_2.compareTo(clock2_1_1), is(equalTo(0)));
         assertThat(clock1_2_2.compareTo(clock2_1_2), is(equalTo(0)));
+    }
 
+    @Test
+    public void shouldCalculateIdentical() {
+        // given
+        final VectorClock vectorClock0 = new VectorClock();
+        final VectorClock vectorClock1 = vectorClock0.increment(ID_1);
+        final VectorClock vectorClock11 = vectorClock1.increment(ID_1);
+        final VectorClock vectorClock2 = vectorClock0.increment(ID_2);
+        final VectorClock vectorClock1_2 = vectorClock1.merge(vectorClock2);
+        final VectorClock vectorClock2_1 = vectorClock2.merge(vectorClock1);
+        final VectorClock vectorClock1_2_1 = vectorClock1_2.increment(ID_1);
+
+        // then
+        assertThat(vectorClock0.isIdentical(vectorClock0), is(true));
+        assertThat(vectorClock1.isIdentical(vectorClock1), is(true));
+        assertThat(vectorClock11.isIdentical(vectorClock11), is(true));
+        assertThat(vectorClock1_2.isIdentical(vectorClock1_2), is(true));
+        assertThat(vectorClock1_2_1.isIdentical(vectorClock1_2_1), is(true));
+
+        assertThat(vectorClock0.isIdentical(vectorClock1), is(false));
+        assertThat(vectorClock1.isIdentical(vectorClock0), is(false));
+        assertThat(vectorClock1.isIdentical(vectorClock11), is(false));
+        assertThat(vectorClock11.isIdentical(vectorClock1), is(false));
+        assertThat(vectorClock1.isIdentical(vectorClock2), is(false));
+        assertThat(vectorClock2.isIdentical(vectorClock1), is(false));
+
+        assertThat(vectorClock1.isIdentical(vectorClock1_2), is(false));
+        assertThat(vectorClock1_2.isIdentical(vectorClock1), is(false));
+        assertThat(vectorClock1.isIdentical(vectorClock2_1), is(false));
+        assertThat(vectorClock2_1.isIdentical(vectorClock1), is(false));
+        assertThat(vectorClock1_2.isIdentical(vectorClock1_2_1), is(false));
+        assertThat(vectorClock1_2_1.isIdentical(vectorClock1_2), is(false));
+
+        assertThat(vectorClock1_2.isIdentical(vectorClock2_1), is(true));
+        assertThat(vectorClock2_1.isIdentical(vectorClock1_2), is(true));
     }
 
 }

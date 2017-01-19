@@ -22,8 +22,7 @@ public class VectorClock implements Comparable<VectorClock> {
 
     @Override
     public int compareTo(VectorClock other) {
-        final Set<String> allKeys = entries.keySet().addAll(other.entries.keySet());
-        final Set<Long> diffs = allKeys.map(key -> entries.get(key).getOrElse(0L) - other.entries.get(key).getOrElse(0L));
+        final Set<Long> diffs = calculateDiffs(other);
         final boolean isGreater = diffs.find(diff -> diff > 0).isDefined();
         final boolean isLess = diffs.find(diff -> diff < 0).isDefined();
 
@@ -36,4 +35,15 @@ public class VectorClock implements Comparable<VectorClock> {
     public VectorClock merge(VectorClock other) {
         return new VectorClock(entries.merge(other.entries, Math::max));
     }
+
+    public boolean isIdentical(VectorClock other) {
+        final Set<Long> diffs = calculateDiffs(other);
+        return diffs.forAll(diff -> diff == 0L);
+    }
+
+    private Set<Long> calculateDiffs(VectorClock other) {
+        final Set<String> allKeys = entries.keySet().addAll(other.entries.keySet());
+        return allKeys.map(key -> entries.get(key).getOrElse(0L) - other.entries.get(key).getOrElse(0L));
+    }
+
 }
