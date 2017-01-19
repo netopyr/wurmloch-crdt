@@ -2,17 +2,18 @@ package com.netopyr.megastore.replica;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
+import javaslang.Function4;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-
-import java.util.function.BiFunction;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 public final class AddCrdtCommand extends CrdtCommand {
 
     private final Class<? extends Crdt> crdtClass;
-    private final BiFunction<Replica, String, ? extends Crdt> factory;
+    private final Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> factory;
 
     public AddCrdtCommand(Crdt crdt) {
         super(crdt.getId());
@@ -20,7 +21,7 @@ public final class AddCrdtCommand extends CrdtCommand {
         this.factory = crdt.getFactory();
     }
 
-    public BiFunction<Replica, String, ? extends Crdt> getFactory() {
+    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
         return factory;
     }
 

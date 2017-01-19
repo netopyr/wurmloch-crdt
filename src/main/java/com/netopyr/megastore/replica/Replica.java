@@ -2,22 +2,33 @@ package com.netopyr.megastore.replica;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
-import io.reactivex.Observable;
+import com.netopyr.megastore.crdt.lwwregister.LWWRegister;
+import com.netopyr.megastore.crdt.orset.ORSet;
+import javaslang.Function4;
 import javaslang.control.Option;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
-import java.util.Objects;
+import java.util.UUID;
 
-public interface Replica {
+public interface Replica extends Publisher<CrdtCommand> {
 
     String getId();
 
-    void register(Crdt crdt);
+    Option<? extends Crdt> findCrdt(String crdtId);
 
-    Option<? extends Crdt> find(String id);
-
-    Observable<CrdtCommand> onCommands();
-
-    default Observable<CrdtCommand> onCommands(Crdt crdt) {
-        return onCommands().filter(command -> Objects.equals(crdt.getId(), command.getCrdtId()));
+    default <T extends Crdt> T createCrdt(Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, T> factory) {
+        return createCrdt(factory, UUID.randomUUID().toString());
     }
+    <T extends Crdt> T createCrdt(Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, T> factory, String id);
+
+    default <T> LWWRegister<T> createLWWRegister() {
+        return createLWWRegister(UUID.randomUUID().toString());
+    }
+    <T> LWWRegister<T> createLWWRegister(String id);
+
+    default <T> ORSet<T> createORSet() {
+        return createORSet(UUID.randomUUID().toString());
+    }
+    <T> ORSet<T> createORSet(String id);
 }

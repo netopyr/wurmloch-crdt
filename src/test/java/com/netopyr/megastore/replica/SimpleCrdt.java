@@ -2,22 +2,23 @@ package com.netopyr.megastore.replica;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
-import io.reactivex.Observable;
-import io.reactivex.subjects.PublishSubject;
-import io.reactivex.subjects.Subject;
+import io.reactivex.processors.PublishProcessor;
+import javaslang.Function4;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-
-import java.util.function.BiFunction;
+import org.reactivestreams.Processor;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 class SimpleCrdt implements Crdt {
 
     private final String id;
-    private final transient Subject<CrdtCommand> stream = PublishSubject.create();
+    private final transient Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
 
-    SimpleCrdt(String id) {
+    SimpleCrdt(String id, Subscriber<? super CrdtCommand> outCommands) {
         this.id = id;
+        commands.subscribe(outCommands);
     }
 
     @Override
@@ -25,19 +26,15 @@ class SimpleCrdt implements Crdt {
         return id;
     }
 
-    @Override
-    public Observable<CrdtCommand> onCommand() {
-        return stream;
-    }
 
     @Override
-    public BiFunction<Replica, String, Crdt> getFactory() {
-        return (replica, id) -> new SimpleCrdt(id);
+    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+        return (replica, id, inCommands, outCommands) -> new SimpleCrdt(id, outCommands);
     }
 
     public void sendCommands(CrdtCommand... commands) {
         for (final CrdtCommand command : commands) {
-            stream.onNext(command);
+            this.commands.onNext(command);
         }
     }
 

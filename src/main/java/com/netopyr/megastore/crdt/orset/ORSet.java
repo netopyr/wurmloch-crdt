@@ -2,10 +2,12 @@ package com.netopyr.megastore.crdt.orset;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
-import com.netopyr.megastore.replica.Replica;
-import io.reactivex.Observable;
-import io.reactivex.subjects.PublishSubject;
-import io.reactivex.subjects.Subject;
+import com.netopyr.megastore.crdt.CrdtSubscriber;
+import io.reactivex.processors.PublishProcessor;
+import javaslang.Function4;
+import org.reactivestreams.Processor;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 import java.util.AbstractSet;
 import java.util.Collection;
@@ -14,7 +16,6 @@ import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -23,13 +24,13 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
     private final String id;
     private final Set<Element<T>> elements = new HashSet<>();
     private final Set<Element<T>> tombstone = new HashSet<>();
-    private final Subject<CrdtCommand> commands = PublishSubject.create();
+    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
 
 
-    public ORSet(Replica replica, String id) {
-        this.id = id;
-        replica.onCommands(this).subscribe(this::processCommand);
-        replica.register(this);
+    public ORSet(String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
+        this.id = Objects.requireNonNull(id, "Id must not be null");
+        inCommands.subscribe(new CrdtSubscriber(id, this::processCommand));
+        commands.subscribe(outCommands);
     }
 
 
@@ -39,15 +40,9 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
     }
 
     @Override
-    public Observable<CrdtCommand> onCommand() {
-        return commands;
+    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+        return (nodeId, id, inCommands, outCommands) -> new ORSet<T>(id, inCommands, outCommands);
     }
-
-    @Override
-    public BiFunction<Replica, String, Crdt> getFactory() {
-        return ORSet::new;
-    }
-
 
     @Override
     public int size() {

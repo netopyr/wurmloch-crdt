@@ -1,27 +1,32 @@
 package com.netopyr.megastore.crdt.lwwregister;
 
-import com.netopyr.megastore.replica.LocalReplica;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.nullValue;
+import static org.mockito.Mockito.mock;
 
 public class LWWRegisterTest {
 
+    @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullReplicaShouldThrow() {
-        new LWWRegister<>(null, "ID_1");
+        new LWWRegister<>(null, "ID_1", mock(Publisher.class), mock(Subscriber.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullIdShouldThrow() {
-        new LWWRegister<>(new LocalReplica(), null);
+        new LWWRegister<String>("R_1", null, mock(Publisher.class), mock(Subscriber.class));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldSetAndGetValue() {
-        final LWWRegister<String> register = new LWWRegister<>(new LocalReplica(), "ID_1");
+        final LWWRegister<String> register = new LWWRegister<>("R_1", "ID_1", mock(Publisher.class), mock(Subscriber.class));
 
         // when
         final String v0 = register.get();

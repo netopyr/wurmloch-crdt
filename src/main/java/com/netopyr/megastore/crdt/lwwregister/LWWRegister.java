@@ -2,29 +2,30 @@ package com.netopyr.megastore.crdt.lwwregister;
 
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
-import com.netopyr.megastore.replica.Replica;
+import com.netopyr.megastore.crdt.CrdtSubscriber;
 import com.netopyr.megastore.vectorclock.VectorClock;
-import io.reactivex.Observable;
-import io.reactivex.subjects.PublishSubject;
-import io.reactivex.subjects.Subject;
+import io.reactivex.processors.PublishProcessor;
+import javaslang.Function4;
+import org.reactivestreams.Processor;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 public class LWWRegister<T> implements Crdt {
 
-    private final String replicaId;
+    private final String nodeId;
     private final String id;
-    private final Subject<CrdtCommand> commands = PublishSubject.create();
+    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
 
     private T value;
     private VectorClock clock = new VectorClock();
 
-    public LWWRegister(Replica replica, String id) {
-        this.replicaId = Objects.requireNonNull(replica, "Replica must not be null").getId();
-        this.id = Objects.requireNonNull(id, "ID must not be null");
-        replica.onCommands(this).subscribe(this::processCommand);
-        replica.register(this);
+    public LWWRegister(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
+        this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
+        this.id = Objects.requireNonNull(id, "Id must not be null");
+        inCommands.subscribe(new CrdtSubscriber(id, this::processCommand));
+        commands.subscribe(outCommands);
     }
 
     @Override
@@ -33,15 +34,9 @@ public class LWWRegister<T> implements Crdt {
     }
 
     @Override
-    public Observable<CrdtCommand> onCommand() {
-        return commands;
-    }
-
-    @Override
-    public BiFunction<Replica, String, Crdt> getFactory() {
+    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
         return LWWRegister::new;
     }
-
 
     public T get() {
         return value;
@@ -52,7 +47,7 @@ public class LWWRegister<T> implements Crdt {
             doSet(newValue);
             commands.onNext(new SetCommand<>(
                     id,
-                    replicaId,
+                    nodeId,
                     value,
                     clock
             ));
@@ -61,7 +56,7 @@ public class LWWRegister<T> implements Crdt {
 
     private void doSet(T value) {
         this.value = value;
-        clock.increment(replicaId);
+        clock.increment(nodeId);
     }
 
     @SuppressWarnings("unchecked")
@@ -74,11 +69,9 @@ public class LWWRegister<T> implements Crdt {
 
     private void doSet(SetCommand<T> setCommand) {
         final int clockComparison = clock.compareTo(setCommand.getClock());
-        if (clockComparison < 0 || (clockComparison == 0 & this.replicaId.compareTo(setCommand.getReplicaId()) > 0)) {
+        if (clockComparison < 0 || (clockComparison == 0 & this.nodeId.compareTo(setCommand.getReplicaId()) > 0)) {
             clock = clock.merge(setCommand.getClock());
             doSet(setCommand.getValue());
         }
     }
-
-
 }

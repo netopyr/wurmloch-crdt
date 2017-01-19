@@ -23,16 +23,16 @@ public class LocalORSetTest {
     @BeforeMethod
     public void setUp() {
         final String ID = "TestORSet";
-        final LocalReplica replica1 = new LocalReplica();
-        replica2 = new LocalReplica();
-        replica3 = new LocalReplica();
+        final LocalReplica replica1 = new LocalReplica("ID_1");
+        replica2 = new LocalReplica("ID_2");
+        replica3 = new LocalReplica("ID_3");
 
         replica1.connect(replica2);
         replica2.connect(replica3);
 
-        orSet1 = new ORSet<>(replica1, ID);
-        orSet2 = (ORSet<String>) replica2.find(ID).get();
-        orSet3 = (ORSet<String>) replica3.find(ID).get();
+        orSet1 = replica1.createORSet(ID);
+        orSet2 = (ORSet<String>) replica2.findCrdt(ID).get();
+        orSet3 = (ORSet<String>) replica3.findCrdt(ID).get();
     }
 
     @Test

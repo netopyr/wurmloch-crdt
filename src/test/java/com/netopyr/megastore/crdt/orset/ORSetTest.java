@@ -1,12 +1,11 @@
 package com.netopyr.megastore.crdt.orset;
 
 import com.netopyr.megastore.crdt.CrdtCommand;
-import com.netopyr.megastore.replica.Replica;
-import io.reactivex.Observable;
-import io.reactivex.observers.TestObserver;
-import io.reactivex.subjects.ReplaySubject;
-import io.reactivex.subjects.Subject;
-import org.mockito.Mockito;
+import io.reactivex.processors.ReplayProcessor;
+import io.reactivex.subscribers.TestSubscriber;
+import org.reactivestreams.Processor;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
@@ -21,20 +20,17 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Matchers.any;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.mock;
 
 public class ORSetTest {
 
     // Set functionality
 
-    @Test
     @SuppressWarnings("unchecked")
+    @Test
     public void shouldAddElements() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        when(replica.onCommands(any())).thenReturn(Observable.empty());
-        final ORSet<String> set = new ORSet<>(replica, "ID");
+        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
 
         // when:
         final boolean result1 = set.add("1");
@@ -55,12 +51,11 @@ public class ORSetTest {
         assertThat(result3, is(false));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldReturnSize() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        when(replica.onCommands(any())).thenReturn(Observable.empty());
-        final ORSet<String> set = new ORSet<>(replica, "ID");
+        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
 
         // then:
         assertThat(set.size(), is(0));
@@ -80,12 +75,11 @@ public class ORSetTest {
         assertThat(set.size(), is(3));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldIterate() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        when(replica.onCommands(any())).thenReturn(Observable.empty());
-        final ORSet<String> set = new ORSet<>(replica, "ID");
+        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
 
         // then:
         assertThat(set.iterator().hasNext(), is(false));
@@ -113,14 +107,13 @@ public class ORSetTest {
         assertThat(results, contains("1", "2", "3"));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldRemoveElements() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        when(replica.onCommands(any())).thenReturn(Observable.empty());
         final Set<String> expected = new HashSet<>();
         expected.addAll(Arrays.asList("1", "2", "3"));
-        final ORSet<String> set = new ORSet<>(replica, "ID");
+        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
         set.addAll(expected);
         final Iterator<String> it = set.iterator();
 
@@ -150,15 +143,12 @@ public class ORSetTest {
 
     // CRDT functionality
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldSendNotificationForAdds() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        when(replica.onCommands(any())).thenReturn(Observable.empty());
-
-        final ORSet<String> set = new ORSet<>(replica, "ID");
-        final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommand().subscribe(observer);
+        final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
+        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), subscriber);
 
         // when:
         set.add("1");
@@ -166,24 +156,21 @@ public class ORSetTest {
         set.add("1");
 
         // then:
-        observer.assertNotComplete();
-        observer.assertNoErrors();
-        assertThat(observer.values(), contains(
+        subscriber.assertNotComplete();
+        subscriber.assertNoErrors();
+        assertThat(subscriber.values(), contains(
                 new AddCommandMatcher<>(set.getId(), "1"),
                 new AddCommandMatcher<>(set.getId(), "2"),
                 new AddCommandMatcher<>(set.getId(), "1")
         ));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldSendNotificationForRemoves() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        when(replica.onCommands(any())).thenReturn(Observable.empty());
-
-        final ORSet<String> set = new ORSet<>(replica, "ID");
-        final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommand().subscribe(observer);
+        final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
+        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), subscriber);
 
         set.add("1");
         set.add("1");
@@ -194,25 +181,22 @@ public class ORSetTest {
         it.remove();
 
         // then:
-        observer.assertNotComplete();
-        observer.assertNoErrors();
-        assertThat(observer.values(), contains(
+        subscriber.assertNotComplete();
+        subscriber.assertNoErrors();
+        assertThat(subscriber.values(), contains(
                 new AddCommandMatcher<>(set.getId(), "1"),
                 new AddCommandMatcher<>(set.getId(), "1"),
                 new RemoveCommandMatcher<>(set.getId(), "1", "1")
         ));
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     public void shouldHandleAddCommands() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        final Subject<CrdtCommand> inputStream = ReplaySubject.create();
-        when(replica.onCommands(any())).thenReturn(inputStream);
-
-        final ORSet<String> set = new ORSet<>(replica, "ID");
-        final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommand().subscribe(observer);
+        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
+        final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
 
         final AddCommand<String> command1 = new AddCommand<>(set.getId(), new Element<>("1", UUID.randomUUID()));
         final AddCommand<String> command2 = new AddCommand<>(set.getId(), new Element<>("2", UUID.randomUUID()));
@@ -225,21 +209,17 @@ public class ORSetTest {
 
         // then:
         assertThat(set, hasSize(2));
-        observer.assertNotComplete();
-        observer.assertNoErrors();
-        observer.assertNoValues();
+        subscriber.assertNotComplete();
+        subscriber.assertNoErrors();
+        subscriber.assertNoValues();
     }
 
     @Test
     public void shouldHandleRemoveCommands() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        final Subject<CrdtCommand> inputStream = ReplaySubject.create();
-        when(replica.onCommands(any())).thenReturn(inputStream);
-
-        final ORSet<String> set = new ORSet<>(replica, "ID");
-        final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommand().subscribe(observer);
+        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
+        final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
 
         final Element<String> elem1 = new Element<>("1", UUID.randomUUID());
         final Element<String> elem2 = new Element<>("1", UUID.randomUUID());
@@ -255,21 +235,17 @@ public class ORSetTest {
 
         // then:
         assertThat(set, empty());
-        observer.assertNotComplete();
-        observer.assertNoErrors();
-        observer.assertNoValues();
+        subscriber.assertNotComplete();
+        subscriber.assertNoErrors();
+        subscriber.assertNoValues();
     }
 
     @Test
     public void shouldHandleDuplicateCommands() {
         // given:
-        final Replica replica = Mockito.mock(Replica.class);
-        final Subject<CrdtCommand> inputStream = ReplaySubject.create();
-        when(replica.onCommands(any())).thenReturn(inputStream);
-
-        final ORSet<String> set = new ORSet<>(replica, "ID");
-        final TestObserver<CrdtCommand> observer = new TestObserver<>();
-        set.onCommand().subscribe(observer);
+        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
+        final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
 
         final AddCommand<String> command = new AddCommand<>(set.getId(), new Element<>("1", UUID.randomUUID()));
 
@@ -279,9 +255,9 @@ public class ORSetTest {
 
         // then:
         assertThat(set, hasSize(1));
-        observer.assertNotComplete();
-        observer.assertNoErrors();
-        observer.assertNoValues();
+        subscriber.assertNotComplete();
+        subscriber.assertNoErrors();
+        subscriber.assertNoValues();
     }
 
     @Test

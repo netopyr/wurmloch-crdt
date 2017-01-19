@@ -1,16 +1,13 @@
 package com.netopyr.megastore.crdt;
 
-import com.netopyr.megastore.replica.Replica;
-import io.reactivex.Observable;
-
-import java.util.function.BiFunction;
+import javaslang.Function4;
+import org.reactivestreams.Publisher;
+import org.reactivestreams.Subscriber;
 
 public interface Crdt {
 
     String getId();
 
-    Observable<CrdtCommand> onCommand();
-
-    BiFunction<Replica, String, Crdt> getFactory();
+    Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory();
 
 }
