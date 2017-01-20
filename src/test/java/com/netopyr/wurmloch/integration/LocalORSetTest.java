@@ -1,7 +1,7 @@
-package com.netopyr.megastore.integration;
+package com.netopyr.wurmloch.integration;
 
-import com.netopyr.megastore.crdt.orset.ORSet;
-import com.netopyr.megastore.replica.LocalReplica;
+import com.netopyr.wurmloch.crdt.ORSet;
+import com.netopyr.wurmloch.replica.LocalReplica;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 

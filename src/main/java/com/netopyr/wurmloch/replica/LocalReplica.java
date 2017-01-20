@@ -1,4 +1,4 @@
-package com.netopyr.megastore.replica;
+package com.netopyr.wurmloch.replica;
 
 import io.reactivex.disposables.Disposable;
 import javaslang.collection.HashMap;

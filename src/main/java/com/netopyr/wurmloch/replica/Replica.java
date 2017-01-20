@@ -1,9 +1,9 @@
-package com.netopyr.megastore.replica;
+package com.netopyr.wurmloch.replica;
 
-import com.netopyr.megastore.crdt.Crdt;
-import com.netopyr.megastore.crdt.CrdtCommand;
-import com.netopyr.megastore.crdt.lwwregister.LWWRegister;
-import com.netopyr.megastore.crdt.orset.ORSet;
+import com.netopyr.wurmloch.crdt.Crdt;
+import com.netopyr.wurmloch.crdt.CrdtCommand;
+import com.netopyr.wurmloch.crdt.LWWRegister;
+import com.netopyr.wurmloch.crdt.ORSet;
 import javaslang.Function4;
 import javaslang.control.Option;
 import org.reactivestreams.Publisher;
@@ -12,8 +12,6 @@ import org.reactivestreams.Subscriber;
 import java.util.UUID;
 
 public interface Replica extends Publisher<CrdtCommand> {
-
-    String getId();
 
     Option<? extends Crdt> findCrdt(String crdtId);
 

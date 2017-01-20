@@ -1,12 +1,14 @@
-package com.netopyr.megastore.crdt.lwwregister;
+package com.netopyr.wurmloch.crdt;
 
-import com.netopyr.megastore.crdt.CrdtCommand;
 import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.TestSubscriber;
+import org.hamcrest.CustomMatcher;
 import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
+
+import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -92,7 +94,7 @@ public class LWWRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World")
+                new SetCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World")
         ));
 
         // when
@@ -102,7 +104,7 @@ public class LWWRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World")
+                new SetCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World")
         ));
 
         // when
@@ -112,8 +114,8 @@ public class LWWRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World"),
-                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Goodbye World")
+                new SetCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World"),
+                new SetCommandMatcher<>(NODE_ID, CRDT_ID, "Goodbye World")
         ));
     }
 
@@ -222,5 +224,31 @@ public class LWWRegisterTest {
         // then
         assertThat(register1.get(), is("Hello World"));
         assertThat(register2.get(), is("Hello World"));
+    }
+
+    private static class SetCommandMatcher<T> extends CustomMatcher<CrdtCommand> {
+
+        private final String nodeId;
+        private final String crdtId;
+        private final T value;
+
+        private SetCommandMatcher(String nodeId, String crdtId, T value) {
+            super(String.format("SetLWWCommandMatcher[nodeId=%s,crdtId=%s,value=%s]", nodeId, crdtId, value));
+            this.nodeId = nodeId;
+            this.crdtId = crdtId;
+            this.value = value;
+        }
+
+        @Override
+        public boolean matches(Object o) {
+            if (o instanceof LWWRegister.SetCommand) {
+                final LWWRegister.SetCommand command = (LWWRegister.SetCommand) o;
+                return Objects.equals(command.getNodeId(), nodeId)
+                        && Objects.equals(command.getCrdtId(), crdtId)
+                        && Objects.equals(command.getValue(), value)
+                        && command.getClock() != null;
+            }
+            return false;
+        }
     }
 }

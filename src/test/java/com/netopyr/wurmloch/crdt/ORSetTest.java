@@ -1,8 +1,8 @@
-package com.netopyr.megastore.crdt.orset;
+package com.netopyr.wurmloch.crdt;
 
-import com.netopyr.megastore.crdt.CrdtCommand;
 import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.TestSubscriber;
+import org.hamcrest.CustomMatcher;
 import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -11,6 +11,7 @@ import org.testng.annotations.Test;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -198,9 +199,9 @@ public class ORSetTest {
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
         final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
 
-        final AddCommand<String> command1 = new AddCommand<>(set.getId(), new Element<>("1", UUID.randomUUID()));
-        final AddCommand<String> command2 = new AddCommand<>(set.getId(), new Element<>("2", UUID.randomUUID()));
-        final AddCommand<String> command3 = new AddCommand<>(set.getId(), new Element<>("1", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command1 = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("1", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command2 = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("2", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command3 = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("1", UUID.randomUUID()));
 
         // when:
         inputStream.onNext(command1);
@@ -221,12 +222,12 @@ public class ORSetTest {
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
         final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
 
-        final Element<String> elem1 = new Element<>("1", UUID.randomUUID());
-        final Element<String> elem2 = new Element<>("1", UUID.randomUUID());
-        final Set<Element<String>> elements = new HashSet<>(Arrays.asList(elem1, elem2));
-        final AddCommand<String> command1 = new AddCommand<>(set.getId(), elem1);
-        final AddCommand<String> command2 = new AddCommand<>(set.getId(), elem2);
-        final RemoveCommand<String> command3 = new RemoveCommand<>(set.getId(), elements);
+        final ORSet.Element<String> elem1 = new ORSet.Element<>("1", UUID.randomUUID());
+        final ORSet.Element<String> elem2 = new ORSet.Element<>("1", UUID.randomUUID());
+        final Set<ORSet.Element<String>> elements = new HashSet<>(Arrays.asList(elem1, elem2));
+        final ORSet.AddCommand<String> command1 = new ORSet.AddCommand<>(set.getId(), elem1);
+        final ORSet.AddCommand<String> command2 = new ORSet.AddCommand<>(set.getId(), elem2);
+        final ORSet.RemoveCommand<String> command3 = new ORSet.RemoveCommand<>(set.getId(), elements);
 
         // when:
         inputStream.onNext(command1);
@@ -247,7 +248,7 @@ public class ORSetTest {
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
         final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
 
-        final AddCommand<String> command = new AddCommand<>(set.getId(), new Element<>("1", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("1", UUID.randomUUID()));
 
         // when:
         inputStream.onNext(command);
@@ -267,4 +268,55 @@ public class ORSetTest {
 
     // Observable functionality
 
+    public static class RemoveCommandMatcher<T> extends CustomMatcher<CrdtCommand> {
+
+        private final String crdtId;
+        private final List<T> values;
+
+        @SafeVarargs
+        public RemoveCommandMatcher(String crdtId, T... values) {
+            super(String.format("RemoveCommandMatcher[crdtId=%s,values=%s]", crdtId, Arrays.toString(values)));
+            this.crdtId = crdtId;
+            this.values = Arrays.asList(values);
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public boolean matches(Object o) {
+            if (o instanceof ORSet.RemoveCommand) {
+                final ORSet.RemoveCommand<T> command = (ORSet.RemoveCommand<T>) o;
+                if (! command.getCrdtId().equals(crdtId)) {
+                    return false;
+                }
+                for (final ORSet.Element<T> element : command.getElements()) {
+                    if (! values.contains(element.getValue())) {
+                        return false;
+                    }
+                }
+                return true;
+            }
+            return false;
+        }
+    }
+
+    private static class AddCommandMatcher<T> extends CustomMatcher<CrdtCommand> {
+
+        private final String crdtId;
+        private final T value;
+
+        private AddCommandMatcher(String crdtId, T value) {
+            super(String.format("AddCommandMatcher[crdtId=%s,elementValue=%s]", crdtId, value));
+            this.crdtId = crdtId;
+            this.value = value;
+        }
+
+        @Override
+        public boolean matches(Object o) {
+            if (o instanceof ORSet.AddCommand) {
+                final ORSet.AddCommand command = (ORSet.AddCommand) o;
+                return command.getCrdtId().equals(crdtId) && command.getElement().getValue().equals(value);
+            }
+            return false;
+        }
+    }
 }

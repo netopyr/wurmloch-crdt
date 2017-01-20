@@ -1,7 +1,7 @@
-package com.netopyr.megastore.replica;
+package com.netopyr.wurmloch.replica;
 
-import com.netopyr.megastore.crdt.Crdt;
-import com.netopyr.megastore.crdt.CrdtCommand;
+import com.netopyr.wurmloch.crdt.Crdt;
+import com.netopyr.wurmloch.crdt.CrdtCommand;
 import io.reactivex.processors.PublishProcessor;
 import javaslang.Function4;
 import org.apache.commons.lang3.builder.EqualsBuilder;

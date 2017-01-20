@@ -1,6 +1,6 @@
-package com.netopyr.megastore;
+package com.netopyr.wurmloch.vectorclock;
 
-import com.netopyr.megastore.vectorclock.VectorClock;
+import com.netopyr.wurmloch.vectorclock.VectorClock;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -317,28 +317,28 @@ public class VectorClockTest {
         final VectorClock vectorClock1_2_1 = vectorClock1_2.increment(ID_1);
 
         // then
-        assertThat(vectorClock0.isIdentical(vectorClock0), is(true));
-        assertThat(vectorClock1.isIdentical(vectorClock1), is(true));
-        assertThat(vectorClock11.isIdentical(vectorClock11), is(true));
-        assertThat(vectorClock1_2.isIdentical(vectorClock1_2), is(true));
-        assertThat(vectorClock1_2_1.isIdentical(vectorClock1_2_1), is(true));
+        assertThat(vectorClock0.equals(vectorClock0), is(true));
+        assertThat(vectorClock1.equals(vectorClock1), is(true));
+        assertThat(vectorClock11.equals(vectorClock11), is(true));
+        assertThat(vectorClock1_2.equals(vectorClock1_2), is(true));
+        assertThat(vectorClock1_2_1.equals(vectorClock1_2_1), is(true));
 
-        assertThat(vectorClock0.isIdentical(vectorClock1), is(false));
-        assertThat(vectorClock1.isIdentical(vectorClock0), is(false));
-        assertThat(vectorClock1.isIdentical(vectorClock11), is(false));
-        assertThat(vectorClock11.isIdentical(vectorClock1), is(false));
-        assertThat(vectorClock1.isIdentical(vectorClock2), is(false));
-        assertThat(vectorClock2.isIdentical(vectorClock1), is(false));
+        assertThat(vectorClock0.equals(vectorClock1), is(false));
+        assertThat(vectorClock1.equals(vectorClock0), is(false));
+        assertThat(vectorClock1.equals(vectorClock11), is(false));
+        assertThat(vectorClock11.equals(vectorClock1), is(false));
+        assertThat(vectorClock1.equals(vectorClock2), is(false));
+        assertThat(vectorClock2.equals(vectorClock1), is(false));
 
-        assertThat(vectorClock1.isIdentical(vectorClock1_2), is(false));
-        assertThat(vectorClock1_2.isIdentical(vectorClock1), is(false));
-        assertThat(vectorClock1.isIdentical(vectorClock2_1), is(false));
-        assertThat(vectorClock2_1.isIdentical(vectorClock1), is(false));
-        assertThat(vectorClock1_2.isIdentical(vectorClock1_2_1), is(false));
-        assertThat(vectorClock1_2_1.isIdentical(vectorClock1_2), is(false));
+        assertThat(vectorClock1.equals(vectorClock1_2), is(false));
+        assertThat(vectorClock1_2.equals(vectorClock1), is(false));
+        assertThat(vectorClock1.equals(vectorClock2_1), is(false));
+        assertThat(vectorClock2_1.equals(vectorClock1), is(false));
+        assertThat(vectorClock1_2.equals(vectorClock1_2_1), is(false));
+        assertThat(vectorClock1_2_1.equals(vectorClock1_2), is(false));
 
-        assertThat(vectorClock1_2.isIdentical(vectorClock2_1), is(true));
-        assertThat(vectorClock2_1.isIdentical(vectorClock1_2), is(true));
+        assertThat(vectorClock1_2.equals(vectorClock2_1), is(true));
+        assertThat(vectorClock2_1.equals(vectorClock1_2), is(true));
     }
 
 }

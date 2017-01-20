@@ -1,7 +1,7 @@
-package com.netopyr.megastore.replica;
+package com.netopyr.wurmloch.replica;
 
-import com.netopyr.megastore.crdt.Crdt;
-import com.netopyr.megastore.crdt.CrdtCommand;
+import com.netopyr.wurmloch.crdt.Crdt;
+import com.netopyr.wurmloch.crdt.CrdtCommand;
 import io.reactivex.subscribers.TestSubscriber;
 import javaslang.control.Option;
 import org.reactivestreams.Publisher;
@@ -115,8 +115,8 @@ public class LocalReplicaTest {
         replica1Subscriber.assertNotComplete();
         replica1Subscriber.assertNoErrors();
         replica1Subscriber.assertValues(
-                new AddCrdtCommand(crdt1),
-                new AddCrdtCommand(crdt2),
+                new AbstractReplica.AddCrdtCommand(crdt1),
+                new AbstractReplica.AddCrdtCommand(crdt2),
                 command1_1,
                 command2_1,
                 command3_1,
@@ -130,8 +130,8 @@ public class LocalReplicaTest {
         replica1Subscriber.assertNotComplete();
         replica1Subscriber.assertNoErrors();
         replica1Subscriber.assertValues(
-                new AddCrdtCommand(crdt1),
-                new AddCrdtCommand(crdt2),
+                new AbstractReplica.AddCrdtCommand(crdt1),
+                new AbstractReplica.AddCrdtCommand(crdt2),
                 command1_1,
                 command2_1,
                 command3_1,
@@ -182,12 +182,12 @@ public class LocalReplicaTest {
         replica1Subscriber.assertNotComplete();
         replica1Subscriber.assertNoErrors();
         replica1Subscriber.assertValues(
-                new AddCrdtCommand(crdt1),
+                new AbstractReplica.AddCrdtCommand(crdt1),
                 command1_1,
                 command3_1,
                 command3_2,
                 command3_3,
-                new AddCrdtCommand(crdt2),
+                new AbstractReplica.AddCrdtCommand(crdt2),
                 command2_1,
                 command4_1,
                 command4_2,
@@ -197,12 +197,12 @@ public class LocalReplicaTest {
         replica2Subscriber.assertNotComplete();
         replica2Subscriber.assertNoErrors();
         replica2Subscriber.assertValues(
-                new AddCrdtCommand(crdt2),
+                new AbstractReplica.AddCrdtCommand(crdt2),
                 command2_1,
                 command4_1,
                 command4_2,
                 command4_3,
-                new AddCrdtCommand(crdt1),
+                new AbstractReplica.AddCrdtCommand(crdt1),
                 command1_1,
                 command3_1,
                 command3_2,

@@ -1,13 +1,15 @@
-package com.netopyr.megastore.crdt.mvregister;
+package com.netopyr.wurmloch.crdt;
 
-import com.netopyr.megastore.crdt.CrdtCommand;
 import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.TestSubscriber;
 import javaslang.collection.Array;
+import org.hamcrest.CustomMatcher;
 import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
+
+import java.util.Objects;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
@@ -94,7 +96,7 @@ public class MVRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetMVCommandMatcher<>(CRDT_ID, "Hello World")
+                new SetCommandMatcher<>(CRDT_ID, "Hello World")
         ));
 
         // when
@@ -104,7 +106,7 @@ public class MVRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetMVCommandMatcher<>(CRDT_ID, "Hello World")
+                new SetCommandMatcher<>(CRDT_ID, "Hello World")
         ));
 
         // when
@@ -114,8 +116,8 @@ public class MVRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), containsInAnyOrder(
-                new SetMVCommandMatcher<>(CRDT_ID, "Hello World"),
-                new SetMVCommandMatcher<>(CRDT_ID, "Goodbye World")
+                new SetCommandMatcher<>(CRDT_ID, "Hello World"),
+                new SetCommandMatcher<>(CRDT_ID, "Goodbye World")
         ));
     }
 
@@ -293,5 +295,28 @@ public class MVRegisterTest {
         // then
         assertThat(register1.get(), containsInAnyOrder("42"));
         assertThat(register2.get(), containsInAnyOrder("42", "Goodbye World"));
+    }
+
+    private static class SetCommandMatcher<T> extends CustomMatcher<CrdtCommand> {
+
+        private final String crdtId;
+        private final T value;
+
+        private SetCommandMatcher(String crdtId, T value) {
+            super(String.format("SetMVCommandMatcher[crdtId=%s,value=%s]", crdtId, value));
+            this.crdtId = crdtId;
+            this.value = value;
+        }
+
+        @Override
+        public boolean matches(Object o) {
+            if (o instanceof MVRegister.SetCommand) {
+                final MVRegister.SetCommand command = (MVRegister.SetCommand) o;
+                return Objects.equals(command.getCrdtId(), crdtId)
+                        && Objects.equals(command.getEntry().getValue(), value)
+                        && command.getEntry().getClock() != null;
+            }
+            return false;
+        }
     }
 }

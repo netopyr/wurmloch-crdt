@@ -1,4 +1,4 @@
-package com.netopyr.megastore.crdt;
+package com.netopyr.wurmloch.crdt;
 
 import io.reactivex.subscribers.DisposableSubscriber;
 

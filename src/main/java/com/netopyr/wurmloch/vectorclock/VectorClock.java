@@ -1,10 +1,12 @@
-package com.netopyr.megastore.vectorclock;
+package com.netopyr.wurmloch.vectorclock;
 
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import javaslang.collection.Set;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
+import org.apache.commons.lang3.builder.ToStringBuilder;
 
-public class VectorClock implements Comparable<VectorClock> {
+public final class VectorClock implements Comparable<VectorClock> {
 
     private final Map<String, Long> entries;
 
@@ -36,14 +38,33 @@ public class VectorClock implements Comparable<VectorClock> {
         return new VectorClock(entries.merge(other.entries, Math::max));
     }
 
-    public boolean isIdentical(VectorClock other) {
-        final Set<Long> diffs = calculateDiffs(other);
-        return diffs.forAll(diff -> diff == 0L);
-    }
-
     private Set<Long> calculateDiffs(VectorClock other) {
         final Set<String> allKeys = entries.keySet().addAll(other.entries.keySet());
         return allKeys.map(key -> entries.get(key).getOrElse(0L) - other.entries.get(key).getOrElse(0L));
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+
+        if (o == null || getClass() != o.getClass()) return false;
+
+        VectorClock that = (VectorClock) o;
+
+        return calculateDiffs(that).forAll(diff -> diff == 0);
+    }
+
+    @Override
+    public int hashCode() {
+        return new HashCodeBuilder(17, 37)
+                .append(entries)
+                .toHashCode();
+    }
+
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this)
+                .append("entries", entries)
+                .toString();
+    }
 }
