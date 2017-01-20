@@ -1,36 +1,25 @@
 package com.netopyr.megastore.crdt.lwwregister;
 
+import com.netopyr.megastore.crdt.AbstractCrdt;
 import com.netopyr.megastore.crdt.Crdt;
 import com.netopyr.megastore.crdt.CrdtCommand;
-import com.netopyr.megastore.crdt.CrdtSubscriber;
 import com.netopyr.megastore.vectorclock.VectorClock;
-import io.reactivex.processors.PublishProcessor;
 import javaslang.Function4;
-import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
 
-public class LWWRegister<T> implements Crdt {
+public class LWWRegister<T> extends AbstractCrdt implements Crdt {
 
     private final String nodeId;
-    private final String id;
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
 
     private T value;
     private VectorClock clock = new VectorClock();
 
     public LWWRegister(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
+        super(id, inCommands, outCommands);
         this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
-        this.id = Objects.requireNonNull(id, "Id must not be null");
-        inCommands.subscribe(new CrdtSubscriber(id, this::processCommand));
-        commands.subscribe(outCommands);
-    }
-
-    @Override
-    public String getId() {
-        return id;
     }
 
     @Override
@@ -45,7 +34,7 @@ public class LWWRegister<T> implements Crdt {
     public void set(T newValue) {
         if (! Objects.equals(value, newValue)) {
             doSet(newValue);
-            commands.onNext(new SetCommand<>(
+            commands.onNext(new SetLWWCommand<>(
                     id,
                     nodeId,
                     value,
@@ -54,24 +43,22 @@ public class LWWRegister<T> implements Crdt {
         }
     }
 
+    @Override
+    @SuppressWarnings("unchecked")
+    protected void processCommand(CrdtCommand command) {
+        final Class<? extends CrdtCommand> clazz = command.getClass();
+        if (SetLWWCommand.class.equals(clazz)) {
+            final SetLWWCommand<T> setLWWCommand = (SetLWWCommand<T>) command;
+            final int clockComparison = clock.compareTo(setLWWCommand.getClock());
+            if (clockComparison < 0 || (clockComparison == 0 & this.nodeId.compareTo(setLWWCommand.getNodeId()) > 0)) {
+                clock = clock.merge(setLWWCommand.getClock());
+                doSet(setLWWCommand.getValue());
+            }
+        }
+    }
+
     private void doSet(T value) {
         this.value = value;
-        clock.increment(nodeId);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void processCommand(CrdtCommand command) {
-        final Class<? extends CrdtCommand> clazz = command.getClass();
-        if (SetCommand.class.equals(clazz)) {
-            doSet((SetCommand) command);
-        }
-    }
-
-    private void doSet(SetCommand<T> setCommand) {
-        final int clockComparison = clock.compareTo(setCommand.getClock());
-        if (clockComparison < 0 || (clockComparison == 0 & this.nodeId.compareTo(setCommand.getReplicaId()) > 0)) {
-            clock = clock.merge(setCommand.getClock());
-            doSet(setCommand.getValue());
-        }
+        clock = clock.increment(nodeId);
     }
 }

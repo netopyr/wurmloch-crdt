@@ -5,21 +5,21 @@ import com.netopyr.megastore.vectorclock.VectorClock;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
-public class SetCommand<T> extends CrdtCommand {
+public class SetLWWCommand<T> extends CrdtCommand {
 
-    private final String replicaId;
+    private final String nodeId;
     private final T value;
     private final VectorClock clock;
 
-    public SetCommand(String crdtId, String replicaId, T value, VectorClock clock) {
+    public SetLWWCommand(String crdtId, String nodeId, T value, VectorClock clock) {
         super(crdtId);
-        this.replicaId = replicaId;
+        this.nodeId = nodeId;
         this.value = value;
         this.clock = clock;
     }
 
-    public String getReplicaId() {
-        return replicaId;
+    public String getNodeId() {
+        return nodeId;
     }
 
     public T getValue() {
@@ -33,7 +33,8 @@ public class SetCommand<T> extends CrdtCommand {
     @Override
     public String toString() {
         return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
-                .append("replicaId", replicaId)
+                .appendSuper(super.toString())
+                .append("nodeId", nodeId)
                 .append("value", value)
                 .append("clock", clock)
                 .toString();
