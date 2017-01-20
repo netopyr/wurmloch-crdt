@@ -71,9 +71,9 @@ public class LWWRegister<T> extends AbstractCrdt implements Crdt {
 
         SetCommand(String crdtId, String nodeId, T value, VectorClock clock) {
             super(crdtId);
-            this.nodeId = nodeId;
+            this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
             this.value = value;
-            this.clock = clock;
+            this.clock = Objects.requireNonNull(clock, "Clock must not be null");
         }
 
         String getNodeId() {

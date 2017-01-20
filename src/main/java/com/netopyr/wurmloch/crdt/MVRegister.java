@@ -77,7 +77,7 @@ public class MVRegister<T> extends AbstractCrdt implements Crdt {
 
         private Entry(T value, VectorClock clock) {
             this.value = value;
-            this.clock = clock;
+            this.clock = Objects.requireNonNull(clock, "Clock must not be null");
         }
 
         T getValue() {
@@ -125,7 +125,7 @@ public class MVRegister<T> extends AbstractCrdt implements Crdt {
 
         SetCommand(String crdtId, Entry<T> entry) {
             super(crdtId);
-            this.entry = entry;
+            this.entry = Objects.requireNonNull(entry, "Entry must not be null");
         }
 
         Entry<T> getEntry() {

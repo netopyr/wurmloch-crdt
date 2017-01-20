@@ -5,12 +5,14 @@ import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
+import java.util.Objects;
+
 public abstract class CrdtCommand {
 
     private final String crdtId;
 
     public CrdtCommand(String crdtId) {
-        this.crdtId = crdtId;
+        this.crdtId = Objects.requireNonNull(crdtId, "CrdtId must not be null");
     }
 
     public String getCrdtId() {
