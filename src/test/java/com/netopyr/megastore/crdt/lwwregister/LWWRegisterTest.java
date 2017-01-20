@@ -26,29 +26,32 @@ public class LWWRegisterTest {
     @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullIdShouldThrow() {
-        new LWWRegister<String>("R_1", null, mock(Publisher.class), mock(Subscriber.class));
+        new LWWRegister<String>("N_1", null, mock(Publisher.class), mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullPublisherShouldThrow() {
-        new LWWRegister<String>("R_1", "ID_1", null, mock(Subscriber.class));
+        new LWWRegister<String>("N_1", "ID_1", null, mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullSubscriberShouldThrow() {
-        new LWWRegister<String>("R_1", "ID_1", mock(Publisher.class), null);
+        new LWWRegister<String>("N_1", "ID_1", mock(Publisher.class), null);
     }
 
 
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldGetAndSetValues() {
+        final String NODE_ID = "N_1";
+        final String CRDT_ID = "ID_1";
+
         // given
-        final LWWRegister<String> register = new LWWRegister<>("R_1", "ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final LWWRegister<String> register = new LWWRegister<>(NODE_ID, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
 
         // when
         final String v0 = register.get();
@@ -75,12 +78,12 @@ public class LWWRegisterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldSendCommandsOnUpdates() {
-        final String REPLICA_ID = "R_1";
+        final String NODE_ID = "N_1";
         final String CRDT_ID = "ID_1";
 
         // given
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final LWWRegister<String> register = new LWWRegister<>(REPLICA_ID, CRDT_ID, mock(Publisher.class), subscriber);
+        final LWWRegister<String> register = new LWWRegister<>(NODE_ID, CRDT_ID, mock(Publisher.class), subscriber);
 
         // when
         register.set("Hello World");
@@ -89,7 +92,7 @@ public class LWWRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetLWWCommandMatcher<>(REPLICA_ID, CRDT_ID, "Hello World")
+                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World")
         ));
 
         // when
@@ -99,7 +102,7 @@ public class LWWRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetLWWCommandMatcher<>(REPLICA_ID, CRDT_ID, "Hello World")
+                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World")
         ));
 
         // when
@@ -109,16 +112,16 @@ public class LWWRegisterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new SetLWWCommandMatcher<>(REPLICA_ID, CRDT_ID, "Hello World"),
-                new SetLWWCommandMatcher<>(REPLICA_ID, CRDT_ID, "Goodbye World")
+                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Hello World"),
+                new SetLWWCommandMatcher<>(NODE_ID, CRDT_ID, "Goodbye World")
         ));
     }
 
 
     @Test
     public void itShouldAcceptNewerValueFromReceivedCommands() {
-        final String REPLICA_ID_1 = "R_1";
-        final String REPLICA_ID_2 = "R_2";
+        final String NODE_ID_1 = "N_1";
+        final String NODE_ID_2 = "N_2";
         final String CRDT_ID = "ID_1";
 
         // given
@@ -126,8 +129,8 @@ public class LWWRegisterTest {
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
         final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final LWWRegister<String> register1 = new LWWRegister<>(REPLICA_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final LWWRegister<String> register2 = new LWWRegister<>(REPLICA_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final LWWRegister<String> register1 = new LWWRegister<>(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
+        final LWWRegister<String> register2 = new LWWRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
 
         // when
         register1.set("Hello World");
@@ -168,9 +171,9 @@ public class LWWRegisterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldIgnoreOlderValueFromReceivedCommands() {
-        final String REPLICA_ID_1 = "R_1";
-        final String REPLICA_ID_2 = "R_2";
-        final String REPLICA_ID_3 = "R_3";
+        final String NODE_ID_1 = "N_1";
+        final String NODE_ID_2 = "N_2";
+        final String NODE_ID_3 = "R_3";
         final String CRDT_ID = "ID_1";
 
         // given
@@ -178,9 +181,9 @@ public class LWWRegisterTest {
         final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
         final Processor<CrdtCommand, CrdtCommand> inCommands3 = ReplayProcessor.create();
-        final LWWRegister<String> register1 = new LWWRegister<>(REPLICA_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
-        final LWWRegister<String> register2 = new LWWRegister<>(REPLICA_ID_2, CRDT_ID, inCommands2, outCommands2);
-        final LWWRegister<String> register3 = new LWWRegister<>(REPLICA_ID_3, CRDT_ID, inCommands3, mock(Subscriber.class));
+        final LWWRegister<String> register1 = new LWWRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
+        final LWWRegister<String> register2 = new LWWRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final LWWRegister<String> register3 = new LWWRegister<>(NODE_ID_3, CRDT_ID, inCommands3, mock(Subscriber.class));
 
         // when
         register1.set("Hello World");
@@ -198,8 +201,8 @@ public class LWWRegisterTest {
 
     @Test
     public void itShouldChooseSmallerReplicaIdIfCommandsAreConcurrent() {
-        final String REPLICA_ID_1 = "R_1";
-        final String REPLICA_ID_2 = "R_2";
+        final String NODE_ID_1 = "N_1";
+        final String NODE_ID_2 = "N_2";
         final String CRDT_ID = "ID_1";
 
         // given
@@ -207,8 +210,8 @@ public class LWWRegisterTest {
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
         final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final LWWRegister<String> register1 = new LWWRegister<>(REPLICA_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final LWWRegister<String> register2 = new LWWRegister<>(REPLICA_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final LWWRegister<String> register1 = new LWWRegister<>(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
+        final LWWRegister<String> register2 = new LWWRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
 
         // when
         register1.set("Hello World");
