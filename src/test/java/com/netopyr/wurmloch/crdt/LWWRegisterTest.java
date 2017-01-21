@@ -136,13 +136,6 @@ public class LWWRegisterTest {
 
         // when
         register1.set("Hello World");
-
-        // then
-        assertThat(outCommands1.valueCount(), is(1));
-        outCommands1.assertNotComplete();
-        outCommands1.assertNoErrors();
-
-        // when
         inCommands2.onNext(outCommands1.values().get(0));
 
         // then
@@ -153,13 +146,6 @@ public class LWWRegisterTest {
 
         // when
         register2.set("Goodbye World");
-
-        // then
-        assertThat(outCommands2.valueCount(), is(1));
-        outCommands2.assertNotComplete();
-        outCommands2.assertNoErrors();
-
-        // when
         inCommands1.onNext(outCommands2.values().get(0));
 
         // then
