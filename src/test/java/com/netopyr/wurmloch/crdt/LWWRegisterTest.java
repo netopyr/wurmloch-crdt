@@ -188,7 +188,7 @@ public class LWWRegisterTest {
 
 
     @Test
-    public void itShouldChooseSmallerReplicaIdIfCommandsAreConcurrent() {
+    public void itShouldChooseLargerReplicaIdIfCommandsAreConcurrent() {
         final String NODE_ID_1 = "N_1";
         final String NODE_ID_2 = "N_2";
         final String CRDT_ID = "ID_1";
@@ -208,8 +208,8 @@ public class LWWRegisterTest {
         inCommands2.onNext(outCommands1.values().get(0));
 
         // then
-        assertThat(register1.get(), is("Hello World"));
-        assertThat(register2.get(), is("Hello World"));
+        assertThat(register1.get(), is("Goodbye World"));
+        assertThat(register2.get(), is("Goodbye World"));
     }
 
     private static class SetCommandMatcher<T> extends CustomMatcher<CrdtCommand> {
@@ -229,8 +229,7 @@ public class LWWRegisterTest {
         public boolean matches(Object o) {
             if (o instanceof LWWRegister.SetCommand) {
                 final LWWRegister.SetCommand command = (LWWRegister.SetCommand) o;
-                return Objects.equals(command.getNodeId(), nodeId)
-                        && Objects.equals(command.getCrdtId(), crdtId)
+                return Objects.equals(command.getCrdtId(), crdtId)
                         && Objects.equals(command.getValue(), value)
                         && command.getClock() != null;
             }

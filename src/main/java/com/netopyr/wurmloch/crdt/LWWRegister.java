@@ -1,6 +1,6 @@
 package com.netopyr.wurmloch.crdt;
 
-import com.netopyr.wurmloch.vectorclock.VectorClock;
+import com.netopyr.wurmloch.vectorclock.StrictVectorClock;
 import javaslang.Function4;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -13,14 +13,13 @@ import java.util.Objects;
 
 public class LWWRegister<T> extends AbstractCrdt implements Crdt {
 
-    private final String nodeId;
-
     private T value;
-    private VectorClock clock = new VectorClock();
+    private StrictVectorClock clock;
 
     public LWWRegister(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
         super(id, inCommands, outCommands);
-        this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
+        Objects.requireNonNull(nodeId, "NodeId must not be null");
+        this.clock = new StrictVectorClock(nodeId);
     }
 
     @Override
@@ -37,7 +36,6 @@ public class LWWRegister<T> extends AbstractCrdt implements Crdt {
             doSet(newValue);
             commands.onNext(new SetCommand<>(
                     id,
-                    nodeId,
                     value,
                     clock
             ));
@@ -50,8 +48,7 @@ public class LWWRegister<T> extends AbstractCrdt implements Crdt {
         final Class<? extends CrdtCommand> clazz = command.getClass();
         if (SetCommand.class.equals(clazz)) {
             final SetCommand<T> setCommand = (SetCommand<T>) command;
-            final int clockComparison = clock.compareTo(setCommand.getClock());
-            if (clockComparison < 0 || (clockComparison == 0 & this.nodeId.compareTo(setCommand.getNodeId()) > 0)) {
+            if (clock.compareTo(setCommand.getClock()) < 0) {
                 clock = clock.merge(setCommand.getClock());
                 doSet(setCommand.getValue());
             }
@@ -60,31 +57,25 @@ public class LWWRegister<T> extends AbstractCrdt implements Crdt {
 
     private void doSet(T value) {
         this.value = value;
-        clock = clock.increment(nodeId);
+        clock = clock.increment();
     }
 
     static final class SetCommand<T> extends CrdtCommand {
 
-        private final String nodeId;
         private final T value;
-        private final VectorClock clock;
+        private final StrictVectorClock clock;
 
-        SetCommand(String crdtId, String nodeId, T value, VectorClock clock) {
+        SetCommand(String crdtId, T value, StrictVectorClock clock) {
             super(crdtId);
-            this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
             this.value = value;
             this.clock = Objects.requireNonNull(clock, "Clock must not be null");
-        }
-
-        String getNodeId() {
-            return nodeId;
         }
 
         T getValue() {
             return value;
         }
 
-        VectorClock getClock() {
+        StrictVectorClock getClock() {
             return clock;
         }
 
@@ -98,7 +89,6 @@ public class LWWRegister<T> extends AbstractCrdt implements Crdt {
 
             return new EqualsBuilder()
                     .appendSuper(super.equals(o))
-                    .append(nodeId, that.nodeId)
                     .append(value, that.value)
                     .append(clock, that.clock)
                     .isEquals();
@@ -108,7 +98,6 @@ public class LWWRegister<T> extends AbstractCrdt implements Crdt {
         public int hashCode() {
             return new HashCodeBuilder(17, 37)
                     .appendSuper(super.hashCode())
-                    .append(nodeId)
                     .append(value)
                     .append(clock)
                     .toHashCode();
@@ -118,7 +107,6 @@ public class LWWRegister<T> extends AbstractCrdt implements Crdt {
         public String toString() {
             return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                     .appendSuper(super.toString())
-                    .append("nodeId", nodeId)
                     .append("value", value)
                     .append("clock", clock)
                     .toString();
