@@ -5,6 +5,38 @@
     <groupId>com.netopyr.wurmloch</groupId>
     <artifactId>wurmloch-crdt</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+
+    <name>Wurmloch CRDT</name>
+    <description>Experimental CRDT-implementations for the JVM</description>
+    <url>https://github.com/netopyr/wurmloch-crdt</url>
+
+    <licenses>
+        <license>
+            <name>Apache License, Version 2.0</name>
+            <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
+
+    <properties>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <developers>
+        <developer>
+            <name>Michael Heinrichs</name>
+            <email>michael.heinrichs@netopyr.com</email>
+            <url>http://blog.netopyr.com</url>
+        </developer>
+    </developers>
+
+    <scm>
+        <connection>scm:git:https://github.com/netopyr/wurmloch-crdt.git</connection>
+        <developerConnection>scm:git:git@github.com:netopyr/wurmloch-crdt.git</developerConnection>
+        <url>https://github.com/netopyr/wurmloch-crdt</url>
+        <tag>HEAD</tag>
+    </scm>
+
     <build>
         <plugins>
             <plugin>
@@ -18,13 +50,6 @@
         </plugins>
     </build>
     <packaging>jar</packaging>
-
-    <name>core</name>
-    <url>http://maven.apache.org</url>
-
-    <properties>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
 
     <dependencies>
         <dependency>
