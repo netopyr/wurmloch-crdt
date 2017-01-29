@@ -1,7 +1,7 @@
 package com.netopyr.wurmloch.examples;
 
 import com.netopyr.wurmloch.crdt.GSet;
-import com.netopyr.wurmloch.replica.LocalReplica;
+import com.netopyr.wurmloch.replica.LocalReplicaStore;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -14,8 +14,8 @@ public class ReplicaExample {
     @Test
     public static void runReplicaExample() {
 
-        final LocalReplica replica1 = new LocalReplica();
-        final LocalReplica replica2 = new LocalReplica();
+        final LocalReplicaStore replica1 = new LocalReplicaStore();
+        final LocalReplicaStore replica2 = new LocalReplicaStore();
 
         final GSet<String> crdtInReplica1 = replica1.createGSet("ID_1");
 

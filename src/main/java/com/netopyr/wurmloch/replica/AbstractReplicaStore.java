@@ -25,7 +25,7 @@ import org.reactivestreams.Subscriber;
 
 import java.util.UUID;
 
-class AbstractReplica implements Replica {
+class AbstractReplicaStore implements ReplicaStore {
 
     private final String nodeId;
     private final ReplayProcessor<CrdtCommand> commandProcessor = ReplayProcessor.create();
@@ -34,10 +34,10 @@ class AbstractReplica implements Replica {
     private Map<String, Crdt> crdts = HashMap.empty();
 
 
-    AbstractReplica() {
+    AbstractReplicaStore() {
         this(UUID.randomUUID().toString());
     }
-    AbstractReplica(String nodeId) {
+    AbstractReplicaStore(String nodeId) {
         this.nodeId = nodeId;
     }
 

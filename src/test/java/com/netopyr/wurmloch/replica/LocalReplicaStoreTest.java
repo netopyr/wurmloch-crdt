@@ -11,7 +11,7 @@ import org.testng.annotations.Test;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class LocalReplicaTest {
+public class LocalReplicaStoreTest {
 
     public static SimpleCrdt createCrdt(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
         return new SimpleCrdt(id, outCommands);
@@ -21,7 +21,7 @@ public class LocalReplicaTest {
     @Test
     public void shouldFindCrdts() {
         // given:
-        final LocalReplica replica = new LocalReplica();
+        final LocalReplicaStore replica = new LocalReplicaStore();
 
         // when:
         final Option<? extends Crdt> result1 = replica.findCrdt("ID_1");
@@ -30,7 +30,7 @@ public class LocalReplicaTest {
         assertThat(result1.isDefined(), is(false));
 
         // when:
-        final SimpleCrdt expected = replica.createCrdt(LocalReplicaTest::createCrdt, "ID_1");
+        final SimpleCrdt expected = replica.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_1");
         final Option<? extends Crdt> result2 = replica.findCrdt("ID_1");
 
         // then:
@@ -40,18 +40,18 @@ public class LocalReplicaTest {
     @Test
     public void shouldAddCrdtWhileConnected() {
         // given:
-        final LocalReplica replica1 = new LocalReplica();
-        final LocalReplica replica2 = new LocalReplica();
+        final LocalReplicaStore replica1 = new LocalReplicaStore();
+        final LocalReplicaStore replica2 = new LocalReplicaStore();
         replica1.connect(replica2);
 
         // when:
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaTest::createCrdt, "ID_1");
+        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_1");
 
         // then:
         assertThat(replica2.findCrdt("ID_1").get(), is(crdt1));
 
         // when:
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaTest::createCrdt, "ID_2");
+        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_2");
 
         // then:
         assertThat(replica1.findCrdt("ID_2").get(), is(crdt2));
@@ -60,10 +60,10 @@ public class LocalReplicaTest {
     @Test
     public void shouldAddCrdtAfterConnect() {
         // given:
-        final LocalReplica replica1 = new LocalReplica();
-        final LocalReplica replica2 = new LocalReplica();
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaTest::createCrdt, "ID_1");
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaTest::createCrdt, "ID_2");
+        final LocalReplicaStore replica1 = new LocalReplicaStore();
+        final LocalReplicaStore replica2 = new LocalReplicaStore();
+        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_1");
+        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_2");
 
         // then:
         assertThat(replica2.findCrdt("ID_1").isDefined(), is(false));
@@ -81,18 +81,18 @@ public class LocalReplicaTest {
     @SuppressWarnings("unchecked")
     public void shouldSendCommandsToConnectedReplica() {
         // given:
-        final LocalReplica replica1 = new LocalReplica();
+        final LocalReplicaStore replica1 = new LocalReplicaStore();
         final TestSubscriber<CrdtCommand> replica1Subscriber = TestSubscriber.create();
         replica1.subscribe(replica1Subscriber);
 
-        final LocalReplica replica2 = new LocalReplica();
+        final LocalReplicaStore replica2 = new LocalReplicaStore();
         final TestSubscriber<CrdtCommand> replica2Subscriber = TestSubscriber.create();
         replica2.subscribe(replica2Subscriber);
 
         replica1.connect(replica2);
 
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaTest::createCrdt, "ID_1");
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaTest::createCrdt, "ID_2");
+        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_1");
+        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_2");
 
         // when:
         final CrdtCommand command1_1 = new CrdtCommand(crdt1.getId()) {};
@@ -115,8 +115,8 @@ public class LocalReplicaTest {
         replica1Subscriber.assertNotComplete();
         replica1Subscriber.assertNoErrors();
         replica1Subscriber.assertValues(
-                new AbstractReplica.AddCrdtCommand(crdt1),
-                new AbstractReplica.AddCrdtCommand(crdt2),
+                new AbstractReplicaStore.AddCrdtCommand(crdt1),
+                new AbstractReplicaStore.AddCrdtCommand(crdt2),
                 command1_1,
                 command2_1,
                 command3_1,
@@ -130,8 +130,8 @@ public class LocalReplicaTest {
         replica1Subscriber.assertNotComplete();
         replica1Subscriber.assertNoErrors();
         replica1Subscriber.assertValues(
-                new AbstractReplica.AddCrdtCommand(crdt1),
-                new AbstractReplica.AddCrdtCommand(crdt2),
+                new AbstractReplicaStore.AddCrdtCommand(crdt1),
+                new AbstractReplicaStore.AddCrdtCommand(crdt2),
                 command1_1,
                 command2_1,
                 command3_1,
@@ -148,16 +148,16 @@ public class LocalReplicaTest {
     @SuppressWarnings("unchecked")
     public void shouldSendAllCommandsAfterConnect() {
         // given:
-        final LocalReplica replica1 = new LocalReplica();
+        final LocalReplicaStore replica1 = new LocalReplicaStore();
         final TestSubscriber<CrdtCommand> replica1Subscriber = TestSubscriber.create();
         replica1.subscribe(replica1Subscriber);
 
-        final LocalReplica replica2 = new LocalReplica();
+        final LocalReplicaStore replica2 = new LocalReplicaStore();
         final TestSubscriber<CrdtCommand> replica2Subscriber = TestSubscriber.create();
         replica2.subscribe(replica2Subscriber);
 
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaTest::createCrdt, "ID_1");
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaTest::createCrdt, "ID_2");
+        final SimpleCrdt crdt1 = replica1.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_1");
+        final SimpleCrdt crdt2 = replica2.createCrdt(LocalReplicaStoreTest::createCrdt, "ID_2");
 
         final CrdtCommand command1_1 = new CrdtCommand(crdt1.getId()) {};
         crdt1.sendCommands(command1_1);
@@ -182,12 +182,12 @@ public class LocalReplicaTest {
         replica1Subscriber.assertNotComplete();
         replica1Subscriber.assertNoErrors();
         replica1Subscriber.assertValues(
-                new AbstractReplica.AddCrdtCommand(crdt1),
+                new AbstractReplicaStore.AddCrdtCommand(crdt1),
                 command1_1,
                 command3_1,
                 command3_2,
                 command3_3,
-                new AbstractReplica.AddCrdtCommand(crdt2),
+                new AbstractReplicaStore.AddCrdtCommand(crdt2),
                 command2_1,
                 command4_1,
                 command4_2,
@@ -197,12 +197,12 @@ public class LocalReplicaTest {
         replica2Subscriber.assertNotComplete();
         replica2Subscriber.assertNoErrors();
         replica2Subscriber.assertValues(
-                new AbstractReplica.AddCrdtCommand(crdt2),
+                new AbstractReplicaStore.AddCrdtCommand(crdt2),
                 command2_1,
                 command4_1,
                 command4_2,
                 command4_3,
-                new AbstractReplica.AddCrdtCommand(crdt1),
+                new AbstractReplicaStore.AddCrdtCommand(crdt1),
                 command1_1,
                 command3_1,
                 command3_2,

@@ -4,19 +4,19 @@ import io.reactivex.disposables.Disposable;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 
-public class LocalReplica extends AbstractReplica {
+public class LocalReplicaStore extends AbstractReplicaStore {
 
-    private Map<LocalReplica, Disposable> disposables = HashMap.empty();
+    private Map<LocalReplicaStore, Disposable> disposables = HashMap.empty();
 
-    public LocalReplica() {
+    public LocalReplicaStore() {
         super();
     }
-    public LocalReplica(String id) {
+    public LocalReplicaStore(String id) {
         super(id);
     }
 
 
-    public void connect(LocalReplica other) {
+    public void connect(LocalReplicaStore other) {
         if (!disposables.containsKey(other)) {
             final ReplicaSubscriber subscriber = new ReplicaSubscriber();
             other.subscribe(subscriber);
@@ -25,7 +25,7 @@ public class LocalReplica extends AbstractReplica {
         }
     }
 
-    public void disconnect(LocalReplica other) {
+    public void disconnect(LocalReplicaStore other) {
         disposables.get(other).forEach(
                 disposable -> {
                     disposables = disposables.remove(other);

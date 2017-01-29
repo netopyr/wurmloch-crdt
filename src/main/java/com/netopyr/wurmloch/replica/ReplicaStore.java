@@ -16,7 +16,7 @@ import org.reactivestreams.Subscriber;
 
 import java.util.UUID;
 
-public interface Replica extends Publisher<CrdtCommand> {
+public interface ReplicaStore extends Publisher<CrdtCommand> {
 
     Option<? extends Crdt> findCrdt(String crdtId);
 
