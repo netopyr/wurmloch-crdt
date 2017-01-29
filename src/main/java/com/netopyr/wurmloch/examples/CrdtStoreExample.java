@@ -1,6 +1,5 @@
 package com.netopyr.wurmloch.examples;
 
-import com.netopyr.wurmloch.crdt.GSet;
 import com.netopyr.wurmloch.store.LocalCrdtStore;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -10,17 +9,20 @@ public class CrdtStoreExample {
 
     @SuppressWarnings("unchecked")
     public static void main(String[] args) {
-        final LocalCrdtStore replica1 = new LocalCrdtStore();
-        final LocalCrdtStore replica2 = new LocalCrdtStore();
+        // create two LocalCrdtStores
+        final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+        final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
 
-        final GSet<String> crdtInReplica1 = replica1.createGSet("ID_1");
+        // create a new G-Set
+        crdtStore1.createGSet("ID_1");
 
-        assertThat(replica2.findCrdt("ID_1").isEmpty(), is(true));
+        // at this point the LocalCrdtStores are not connected, therefore the new G-Set is unknown in the second store
+        assertThat(crdtStore2.findCrdt("ID_1").isDefined(), is(false));
 
-        replica1.connect(replica2);
+        // connect both stores
+        crdtStore1.connect(crdtStore2);
 
-        assertThat(replica2.findCrdt("ID_1").isEmpty(), is(false));
-
-        final GSet<String> crdtInReplica2 = (GSet<String>) replica2.findCrdt("ID_1").get();
+        // now the new G-Set is also known in the second store
+        assertThat(crdtStore2.findCrdt("ID_1").isDefined(), is(true));
     }
 }
