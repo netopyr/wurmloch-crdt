@@ -2,8 +2,13 @@ package com.netopyr.wurmloch.replica;
 
 import com.netopyr.wurmloch.crdt.Crdt;
 import com.netopyr.wurmloch.crdt.CrdtCommand;
+import com.netopyr.wurmloch.crdt.GCounter;
+import com.netopyr.wurmloch.crdt.GSet;
 import com.netopyr.wurmloch.crdt.LWWRegister;
+import com.netopyr.wurmloch.crdt.MVRegister;
 import com.netopyr.wurmloch.crdt.ORSet;
+import com.netopyr.wurmloch.crdt.PNCounter;
+import com.netopyr.wurmloch.crdt.RGA;
 import io.reactivex.Flowable;
 import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.DisposableSubscriber;
@@ -58,8 +63,43 @@ class AbstractReplica implements Replica {
     }
 
     @Override
+    public <T> MVRegister<T> createMVRegister(String id) {
+        final MVRegister<T> result = new MVRegister<>(nodeId, id, outCommands, new ReplicaSubscriber());
+        register(result);
+        return result;
+    }
+
+    @Override
+    public GCounter createGCounter(String id) {
+        final GCounter result = new GCounter(nodeId, id, outCommands, new ReplicaSubscriber());
+        register(result);
+        return result;
+    }
+
+    @Override
+    public PNCounter createPNCounter(String id) {
+        final PNCounter result = new PNCounter(nodeId, id, outCommands, new ReplicaSubscriber());
+        register(result);
+        return result;
+    }
+
+    @Override
+    public <T> GSet<T> createGSet(String id) {
+        final GSet<T> result = new GSet<>(id, outCommands, new ReplicaSubscriber());
+        register(result);
+        return result;
+    }
+
+    @Override
     public <T> ORSet<T> createORSet(String id) {
         final ORSet<T> result = new ORSet<>(id, outCommands, new ReplicaSubscriber());
+        register(result);
+        return result;
+    }
+
+    @Override
+    public <T> RGA<T> createRGA(String id) {
+        final RGA<T> result = new RGA<>(nodeId, id, outCommands, new ReplicaSubscriber());
         register(result);
         return result;
     }
