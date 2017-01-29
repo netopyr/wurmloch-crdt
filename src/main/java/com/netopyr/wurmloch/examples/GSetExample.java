@@ -7,14 +7,13 @@ import org.hamcrest.Matchers;
 
 public class GSetExample {
 
-    @SuppressWarnings("unchecked")
     public static void main(String[] args) {
 
         final LocalCrdtStore replica1 = new LocalCrdtStore();
         final LocalCrdtStore replica2 = new LocalCrdtStore();
         replica1.connect(replica2);
         final GSet<String> gSetInReplica1 = replica1.createGSet("ID_1");
-        final GSet<String> gSetInReplica2 = (GSet<String>) replica2.findCrdt("ID_1").get();
+        final GSet<String> gSetInReplica2 = replica2.<String>findGSet("ID_1").get();
 
         gSetInReplica1.add("1a");
         gSetInReplica2.add("2a");

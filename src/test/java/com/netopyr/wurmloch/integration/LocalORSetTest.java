@@ -31,8 +31,8 @@ public class LocalORSetTest {
         replica2.connect(replica3);
 
         orSet1 = replica1.createORSet(ID);
-        orSet2 = (ORSet<String>) replica2.findCrdt(ID).get();
-        orSet3 = (ORSet<String>) replica3.findCrdt(ID).get();
+        orSet2 = replica2.<String>findORSet(ID).get();
+        orSet3 = replica3.<String>findORSet(ID).get();
     }
 
     @Test
