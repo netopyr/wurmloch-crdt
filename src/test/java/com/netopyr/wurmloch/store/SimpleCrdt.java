@@ -1,4 +1,4 @@
-package com.netopyr.wurmloch.replica;
+package com.netopyr.wurmloch.store;
 
 import com.netopyr.wurmloch.crdt.Crdt;
 import com.netopyr.wurmloch.crdt.CrdtCommand;
