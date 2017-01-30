@@ -9,29 +9,40 @@ public class GSetExample {
 
     public static void main(String[] args) {
 
-        final LocalCrdtStore replica1 = new LocalCrdtStore();
-        final LocalCrdtStore replica2 = new LocalCrdtStore();
-        replica1.connect(replica2);
-        final GSet<String> gSetInReplica1 = replica1.createGSet("ID_1");
-        final GSet<String> gSetInReplica2 = replica2.<String>findGSet("ID_1").get();
+        // create two LocalCrdtStores and connect them
+        final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+        final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+        crdtStore1.connect(crdtStore2);
 
-        gSetInReplica1.add("1a");
-        gSetInReplica2.add("2a");
+        // create a G-Set and find the according replica in the second store
+        final GSet<String> replica1 = crdtStore1.createGSet("ID_1");
+        final GSet<String> replica2 = crdtStore2.<String>findGSet("ID_1").get();
 
-        MatcherAssert.assertThat(gSetInReplica1, Matchers.containsInAnyOrder("1a", "2a"));
-        MatcherAssert.assertThat(gSetInReplica2, Matchers.containsInAnyOrder("1a", "2a"));
+        // add one entry to each replica
+        replica1.add("apple");
+        replica2.add("banana");
 
-        replica1.disconnect(replica2);
+        // the stores are connected, thus the G-Set is automatically synchronized
+        MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana"));
+        MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana"));
 
-        gSetInReplica1.add("1b");
-        gSetInReplica2.add("2b");
+        // disconnect the stores simulating a network issue, offline mode etc.
+        crdtStore1.disconnect(crdtStore2);
 
-        MatcherAssert.assertThat(gSetInReplica1, Matchers.containsInAnyOrder("1a", "1b", "2a"));
-        MatcherAssert.assertThat(gSetInReplica2, Matchers.containsInAnyOrder("1a", "2a", "2b"));
+        // add one entry to each replica
+        replica1.add("strawberry");
+        replica2.add("pear");
 
-        replica1.connect(replica2);
+        // the stores are not connected, thus the changes have only local effects
+        MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry"));
+        MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "pear"));
 
-        MatcherAssert.assertThat(gSetInReplica1, Matchers.containsInAnyOrder("1a", "1b", "2a", "2b"));
-        MatcherAssert.assertThat(gSetInReplica2, Matchers.containsInAnyOrder("1a", "1b", "2a", "2b"));
+        // reconnect the stores
+        crdtStore1.connect(crdtStore2);
+
+        // the G-Set is synchronized automatically and contains now all elements
+        MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+        MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+
     }
 }

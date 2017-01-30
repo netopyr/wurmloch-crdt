@@ -49,9 +49,55 @@ assertThat(crdtStore2.findCrdt("ID_1").isDefined(), is(true));
 ```
 
 ### G-Set 
-(Grow-Only Set)
 
-### G-Counter (Increment-Only Counter)
+A G-Set or Grow-Only Set is a Set to which elements can only be added and never removed.
+It is probably the simplest CRDT.
+Synchronizing two G-Set that have diverged is accomplished by calculating the union of both Sets.
+
+On first sight, a Set where elements can never be removed might seem superfluous.
+But there are actually a lot of use cases, where such a limited Set is useful.
+For example most domain entities in business applications are never really removed for auditing reasons and therefore could be stored in a G-Set.
+Also it is a common practice to build complex CRDTs upon simple CRDTs.
+All of the more complex CRDT-Sets, that also allow removes, are built on top of G-Sets.
+
+```java
+// create two LocalCrdtStores and connect them
+final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+crdtStore1.connect(crdtStore2);
+
+// create a G-Set and find the according replica in the second store
+final GSet<String> replica1 = crdtStore1.createGSet("ID_1");
+final GSet<String> replica2 = crdtStore2.<String>findGSet("ID_1").get();
+
+// add one entry to each replica
+replica1.add("apple");
+replica2.add("banana");
+
+// the stores are connected, thus the G-Set is automatically synchronized
+MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana"));
+MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana"));
+
+// disconnect the stores simulating a network issue, offline mode etc.
+crdtStore1.disconnect(crdtStore2);
+
+// add one entry to each replica
+replica1.add("strawberry");
+replica2.add("pear");
+
+// the stores are not connected, thus the changes have only local effects
+MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry"));
+MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "pear"));
+
+// reconnect the stores
+crdtStore1.connect(crdtStore2);
+
+// the G-Set is synchronized automatically and contains now all elements
+MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+```
+
+### G-Counter
 
 ### PN-Counter
 
