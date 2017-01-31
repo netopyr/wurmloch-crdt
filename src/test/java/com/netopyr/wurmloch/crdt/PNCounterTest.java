@@ -20,42 +20,63 @@ import static org.mockito.Mockito.mock;
 
 public class PNCounterTest {
 
+    private static final String NODE_ID_1 = "N_1";
+    private static final String NODE_ID_2 = "N_2";
+    private static final String CRDT_ID = "ID_1";
+
+
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullReplicaShouldThrow() {
-        new PNCounter(null, "ID_1", mock(Publisher.class), mock(Subscriber.class));
+        new PNCounter(null, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullIdShouldThrow() {
-        new PNCounter("N_1", null, mock(Publisher.class), mock(Subscriber.class));
+        new PNCounter(NODE_ID_1, null, mock(Publisher.class), mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullPublisherShouldThrow() {
-        new PNCounter("N_1", "ID_1", null, mock(Subscriber.class));
+        new PNCounter(NODE_ID_1, CRDT_ID, null, mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullSubscriberShouldThrow() {
-        new PNCounter("N_1", "ID_1", mock(Publisher.class), null);
+        new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), null);
+    }
+
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void itShouldInitializeWithWaitingInCommands() {
+        // given
+        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
+        final PNCounter counter1 = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
+        counter1.increment(42L);
+
+        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
+        inCommands2.onNext(outCommands1.values().get(0));
+
+        // when
+        final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID, inCommands2, mock(Subscriber.class));
+
+        // then
+        assertThat(counter2.get(), is(42L));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldGetAndIncrementAndDecrementTheValue() {
-        final String NODE_ID = "N_1";
-        final String CRDT_ID = "ID_1";
-
         // given
-        final PNCounter counter = new PNCounter(NODE_ID, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
 
         // when
         final Long v0 = counter.get();
@@ -96,12 +117,9 @@ public class PNCounterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldSendCommandsOnUpdates() {
-        final String NODE_ID = "N_1";
-        final String CRDT_ID = "ID_1";
-
         // given
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final PNCounter counter = new PNCounter(NODE_ID, CRDT_ID, mock(Publisher.class), subscriber);
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), subscriber);
 
         // when
         counter.increment();
@@ -113,20 +131,16 @@ public class PNCounterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID, 1L), HashMap.empty()),
-                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID, 1L), HashMap.of(NODE_ID, 1L)),
-                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID, 4L), HashMap.of(NODE_ID, 1L)),
-                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID, 4L), HashMap.of(NODE_ID, 6L))
+                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID_1, 1L), HashMap.empty()),
+                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID_1, 1L), HashMap.of(NODE_ID_1, 1L)),
+                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID_1, 4L), HashMap.of(NODE_ID_1, 1L)),
+                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID_1, 4L), HashMap.of(NODE_ID_1, 6L))
         ));
     }
 
 
     @Test
     public void itShouldAcceptUpdatesFromReceivedCommands() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
@@ -182,10 +196,6 @@ public class PNCounterTest {
 
     @Test
     public void itShouldIncludeOtherNodeValuesInCommands() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();

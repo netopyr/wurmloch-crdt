@@ -1,31 +1,44 @@
 package com.netopyr.wurmloch.crdt;
 
 import com.netopyr.wurmloch.vectorclock.VectorClock;
+import io.reactivex.processors.PublishProcessor;
 import javaslang.Function4;
 import javaslang.collection.Array;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
 
-public class MVRegister<T> extends AbstractCrdt implements Crdt {
+public class MVRegister<T> implements Crdt {
 
     private final String nodeId;
+    private final String id;
+    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
 
     private Array<Entry<T>> entries = Array.empty();
 
     public MVRegister(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        super(id, inCommands, outCommands);
         this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
+        this.id = Objects.requireNonNull(id, "Id must not be null");
+        inCommands = Objects.requireNonNull(inCommands, "InCommands must not be null");
+        outCommands = Objects.requireNonNull(outCommands, "OutCommands must not be null");
+        inCommands.subscribe(new CrdtSubscriber(id, this::processCommand));
+        commands.subscribe(outCommands);
     }
 
     @Override
     public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
         return MVRegister::new;
+    }
+
+    @Override
+    public String getId() {
+        return id;
     }
 
     public Array<T> get() {
@@ -54,8 +67,7 @@ public class MVRegister<T> extends AbstractCrdt implements Crdt {
     }
 
     @SuppressWarnings("unchecked")
-    @Override
-    protected void processCommand(CrdtCommand command) {
+    private void processCommand(CrdtCommand command) {
         if (command instanceof MVRegister.SetCommand) {
             final Entry<T> newEntry = ((SetCommand<T>)command).getEntry();
             if (entries.exists(entry -> entry.getClock().compareTo(newEntry.getClock()) > 0)) {

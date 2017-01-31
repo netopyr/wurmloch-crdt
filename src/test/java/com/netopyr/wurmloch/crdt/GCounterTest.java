@@ -20,42 +20,63 @@ import static org.mockito.Mockito.mock;
 
 public class GCounterTest {
 
+    private static final String NODE_ID_1 = "N_1";
+    private static final String NODE_ID_2 = "N_2";
+    private static final String CRDT_ID = "ID_1";
+
+
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullReplicaShouldThrow() {
-        new GCounter(null, "ID_1", mock(Publisher.class), mock(Subscriber.class));
+        new GCounter(null, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullIdShouldThrow() {
-        new GCounter("N_1", null, mock(Publisher.class), mock(Subscriber.class));
+        new GCounter(NODE_ID_1, null, mock(Publisher.class), mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullPublisherShouldThrow() {
-        new GCounter("N_1", "ID_1", null, mock(Subscriber.class));
+        new GCounter(NODE_ID_1, CRDT_ID, null, mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullSubscriberShouldThrow() {
-        new GCounter("N_1", "ID_1", mock(Publisher.class), null);
+        new GCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), null);
+    }
+
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void itShouldInitializeWithWaitingInCommands() {
+        // given
+        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
+        final GCounter counter1 = new GCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
+        counter1.increment(42L);
+
+        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
+        inCommands2.onNext(outCommands1.values().get(0));
+
+        // when
+        final GCounter counter2 = new GCounter(NODE_ID_2, CRDT_ID, inCommands2, mock(Subscriber.class));
+
+        // then
+        assertThat(counter2.get(), is(42L));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldGetAndIncrementTheValue() {
-        final String NODE_ID = "N_1";
-        final String CRDT_ID = "ID_1";
-
         // given
-        final GCounter counter = new GCounter(NODE_ID, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final GCounter counter = new GCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
 
         // when
         final Long v0 = counter.get();
@@ -82,12 +103,9 @@ public class GCounterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldSendCommandsOnUpdates() {
-        final String NODE_ID = "N_1";
-        final String CRDT_ID = "ID_1";
-
         // given
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final GCounter counter = new GCounter(NODE_ID, CRDT_ID, mock(Publisher.class), subscriber);
+        final GCounter counter = new GCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), subscriber);
 
         // when
         counter.increment();
@@ -96,7 +114,7 @@ public class GCounterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID, 1L))
+                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID_1, 1L))
         ));
 
         // when
@@ -106,18 +124,14 @@ public class GCounterTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID, 1L)),
-                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID, 43L))
+                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID_1, 1L)),
+                new UpdateCommandMatcher(CRDT_ID, HashMap.of(NODE_ID_1, 43L))
         ));
     }
 
 
     @Test
     public void itShouldAcceptIncrementsFromReceivedCommands() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
@@ -151,10 +165,6 @@ public class GCounterTest {
 
     @Test
     public void itShouldIncludeOtherNodeValuesInCommands() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();

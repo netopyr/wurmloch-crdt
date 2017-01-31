@@ -20,42 +20,63 @@ import static org.mockito.Mockito.mock;
 
 public class MVRegisterTest {
 
+    private static final String NODE_ID_1 = "N_1";
+    private static final String NODE_ID_2 = "N_2";
+    private static final String NODE_ID_3 = "N_3";
+    private static final String CRDT_ID = "ID_1";
+
     @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullReplicaShouldThrow() {
-        new MVRegister<>(null, "ID_1", mock(Publisher.class), mock(Subscriber.class));
+        new MVRegister<>(null, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullIdShouldThrow() {
-        new MVRegister<String>("R_1", null, mock(Publisher.class), mock(Subscriber.class));
+        new MVRegister<String>(NODE_ID_1, null, mock(Publisher.class), mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullPublisherShouldThrow() {
-        new MVRegister<String>("R_1", "ID_1", null, mock(Subscriber.class));
+        new MVRegister<String>(NODE_ID_1, CRDT_ID, null, mock(Subscriber.class));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullSubscriberShouldThrow() {
-        new MVRegister<String>("R_1", "ID_1", mock(Publisher.class), null);
+        new MVRegister<String>(NODE_ID_1, CRDT_ID, mock(Publisher.class), null);
+    }
+
+
+    @SuppressWarnings("unchecked")
+    @Test
+    public void itShouldInitializeWithWaitingInCommands() {
+        // given
+        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
+        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
+        register1.set("Hello World");
+
+        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
+        inCommands2.onNext(outCommands1.values().get(0));
+
+        // when
+        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID, inCommands2, mock(Subscriber.class));
+
+        // then
+        assertThat(register2.get(), contains("Hello World"));
     }
 
 
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldGetAndSetValues() {
-        final String NODE_ID = "N_1";
-        final String CRDT_ID = "ID_1";
-
         // given
-        final MVRegister<String> register = new MVRegister<>(NODE_ID, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
 
         // when
         final Array<String> v0 = register.get();
@@ -82,12 +103,9 @@ public class MVRegisterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldSendCommandsOnUpdates() {
-        final String NODE_ID = "N_1";
-        final String CRDT_ID = "ID_1";
-
         // given
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final MVRegister<String> register = new MVRegister<>(NODE_ID, CRDT_ID, mock(Publisher.class), subscriber);
+        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), subscriber);
 
         // when
         register.set("Hello World");
@@ -124,10 +142,6 @@ public class MVRegisterTest {
 
     @Test
     public void itShouldAcceptNewerValueFromReceivedCommands() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
@@ -161,11 +175,6 @@ public class MVRegisterTest {
     @SuppressWarnings("unchecked")
     @Test
     public void itShouldIgnoreOlderValueFromReceivedCommands() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String NODE_ID_3 = "R_3";
-        final String CRDT_ID = "ID_1";
-
         // given
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
         final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
@@ -191,10 +200,6 @@ public class MVRegisterTest {
 
     @Test
     public void itShouldAddOtherValueIfCommandsAreConcurrent() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
@@ -217,10 +222,6 @@ public class MVRegisterTest {
 
     @Test
     public void itShouldOverwriteConcurrentValues() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
@@ -252,10 +253,6 @@ public class MVRegisterTest {
 
     @Test
     public void itShouldOverwriteOnlyPartialCommandsFromReceivedCommand() {
-        final String NODE_ID_1 = "N_1";
-        final String NODE_ID_2 = "N_2";
-        final String CRDT_ID = "ID_1";
-
         // given
         final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();

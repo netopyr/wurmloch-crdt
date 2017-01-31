@@ -1,5 +1,6 @@
 package com.netopyr.wurmloch.crdt;
 
+import io.reactivex.processors.PublishProcessor;
 import javaslang.Function4;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
@@ -7,21 +8,28 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
+import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
 
-public class PNCounter extends AbstractCrdt implements Crdt {
+public class PNCounter implements Crdt {
 
     private final String nodeId;
+    private final String id;
+    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
 
     private Map<String, Long> pEntries = HashMap.empty();
     private Map<String, Long> nEntries = HashMap.empty();
 
     public PNCounter(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        super(id, inCommands, outCommands);
         this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
+        this.id = Objects.requireNonNull(id, "Id must not be null");
+        inCommands = Objects.requireNonNull(inCommands, "InCommands must not be null");
+        outCommands = Objects.requireNonNull(outCommands, "OutCommands must not be null");
+        inCommands.subscribe(new CrdtSubscriber(id, this::processCommand));
+        commands.subscribe(outCommands);
     }
 
     @Override
@@ -30,7 +38,11 @@ public class PNCounter extends AbstractCrdt implements Crdt {
     }
 
     @Override
-    protected void processCommand(CrdtCommand command) {
+    public String getId() {
+        return id;
+    }
+
+    private void processCommand(CrdtCommand command) {
         if (UpdateCommand.class.equals(command.getClass())) {
             final UpdateCommand updateCommand = (UpdateCommand) command;
             pEntries = pEntries.merge(updateCommand.pEntries, Math::max);
