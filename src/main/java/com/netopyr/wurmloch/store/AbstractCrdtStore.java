@@ -120,8 +120,10 @@ class AbstractCrdtStore implements CrdtStore {
         @Override
         public void onNext(CrdtCommand command) {
             if (AddCrdtCommand.class.equals(command.getClass())) {
-                final Crdt crdt = ((AddCrdtCommand)command).getFactory().apply(nodeId, command.getCrdtId(), outCommands, new ReplicaSubscriber());
-                crdts = crdts.put(crdt.getId(), crdt);
+                if (findCrdt(command.getCrdtId()).isEmpty()) {
+                    final Crdt crdt = ((AddCrdtCommand) command).getFactory().apply(nodeId, command.getCrdtId(), outCommands, new ReplicaSubscriber());
+                    crdts = crdts.put(crdt.getId(), crdt);
+                }
             }
             commandProcessor.onNext(command);
         }

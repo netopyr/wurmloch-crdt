@@ -12,8 +12,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 public class LocalCrdtStoreTest {
+    
+    private static final String NODE_ID_1 = "N_1";
+    private static final String NODE_ID_2 = "N_2";
+    
 
-    public static SimpleCrdt createCrdt(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
+    private static SimpleCrdt createCrdt(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
         return new SimpleCrdt(id, outCommands);
     }
 
@@ -21,17 +25,17 @@ public class LocalCrdtStoreTest {
     @Test
     public void shouldFindCrdts() {
         // given:
-        final LocalCrdtStore replica = new LocalCrdtStore();
+        final LocalCrdtStore store = new LocalCrdtStore();
 
         // when:
-        final Option<? extends Crdt> result1 = replica.findCrdt("ID_1");
+        final Option<? extends Crdt> result1 = store.findCrdt(NODE_ID_1);
 
         // then:
         assertThat(result1.isDefined(), is(false));
 
         // when:
-        final SimpleCrdt expected = replica.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_1");
-        final Option<? extends Crdt> result2 = replica.findCrdt("ID_1");
+        final SimpleCrdt expected = store.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_1);
+        final Option<? extends Crdt> result2 = store.findCrdt(NODE_ID_1);
 
         // then:
         assertThat(result2.get(), is(expected));
@@ -40,59 +44,77 @@ public class LocalCrdtStoreTest {
     @Test
     public void shouldAddCrdtWhileConnected() {
         // given:
-        final LocalCrdtStore replica1 = new LocalCrdtStore();
-        final LocalCrdtStore replica2 = new LocalCrdtStore();
-        replica1.connect(replica2);
+        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final LocalCrdtStore store2 = new LocalCrdtStore();
+        store1.connect(store2);
 
         // when:
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_1");
+        final SimpleCrdt crdt1 = store1.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_1);
 
         // then:
-        assertThat(replica2.findCrdt("ID_1").get(), is(crdt1));
+        assertThat(store2.findCrdt(NODE_ID_1).get(), is(crdt1));
 
         // when:
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_2");
+        final SimpleCrdt crdt2 = store2.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_2);
 
         // then:
-        assertThat(replica1.findCrdt("ID_2").get(), is(crdt2));
+        assertThat(store1.findCrdt(NODE_ID_2).get(), is(crdt2));
     }
 
     @Test
     public void shouldAddCrdtAfterConnect() {
         // given:
-        final LocalCrdtStore replica1 = new LocalCrdtStore();
-        final LocalCrdtStore replica2 = new LocalCrdtStore();
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_1");
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_2");
+        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final LocalCrdtStore store2 = new LocalCrdtStore();
+        final SimpleCrdt crdt1 = store1.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_1);
+        final SimpleCrdt crdt2 = store2.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_2);
 
         // then:
-        assertThat(replica2.findCrdt("ID_1").isDefined(), is(false));
-        assertThat(replica1.findCrdt("ID_2").isDefined(), is(false));
+        assertThat(store2.findCrdt(NODE_ID_1).isDefined(), is(false));
+        assertThat(store1.findCrdt(NODE_ID_2).isDefined(), is(false));
 
         // when:
-        replica1.connect(replica2);
+        store1.connect(store2);
 
         // then:
-        assertThat(replica2.findCrdt("ID_1").get(), is(crdt1));
-        assertThat(replica1.findCrdt("ID_2").get(), is(crdt2));
+        assertThat(store2.findCrdt(NODE_ID_1).get(), is(crdt1));
+        assertThat(store1.findCrdt(NODE_ID_2).get(), is(crdt2));
+    }
+
+    @Test
+    public void shouldNotAddExistingCrdtAfterConnect() {
+        // given:
+        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final LocalCrdtStore store2 = new LocalCrdtStore();
+        store1.connect(store2);
+        final SimpleCrdt crdt1 = store1.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_1);
+        final SimpleCrdt crdt2 = (SimpleCrdt) store2.findCrdt(NODE_ID_1).get();
+
+        // when:
+        store1.disconnect(store2);
+        store1.connect(store2);
+
+        // then:
+        assertThat(store1.findCrdt(NODE_ID_1).get() == crdt1, is(true));
+        assertThat(store2.findCrdt(NODE_ID_1).get() == crdt2, is(true));
     }
 
     @Test
     @SuppressWarnings("unchecked")
-    public void shouldSendCommandsToConnectedReplica() {
+    public void shouldSendCommandsToConnectedstore() {
         // given:
-        final LocalCrdtStore replica1 = new LocalCrdtStore();
-        final TestSubscriber<CrdtCommand> replica1Subscriber = TestSubscriber.create();
-        replica1.subscribe(replica1Subscriber);
+        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final TestSubscriber<CrdtCommand> store1Subscriber = TestSubscriber.create();
+        store1.subscribe(store1Subscriber);
 
-        final LocalCrdtStore replica2 = new LocalCrdtStore();
-        final TestSubscriber<CrdtCommand> replica2Subscriber = TestSubscriber.create();
-        replica2.subscribe(replica2Subscriber);
+        final LocalCrdtStore store2 = new LocalCrdtStore();
+        final TestSubscriber<CrdtCommand> store2Subscriber = TestSubscriber.create();
+        store2.subscribe(store2Subscriber);
 
-        replica1.connect(replica2);
+        store1.connect(store2);
 
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_1");
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_2");
+        final SimpleCrdt crdt1 = store1.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_1);
+        final SimpleCrdt crdt2 = store2.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_2);
 
         // when:
         final CrdtCommand command1_1 = new CrdtCommand(crdt1.getId()) {};
@@ -112,9 +134,9 @@ public class LocalCrdtStoreTest {
         crdt2.sendCommands(command4_1, command4_2, command4_3);
 
         // then:
-        replica1Subscriber.assertNotComplete();
-        replica1Subscriber.assertNoErrors();
-        replica1Subscriber.assertValues(
+        store1Subscriber.assertNotComplete();
+        store1Subscriber.assertNoErrors();
+        store1Subscriber.assertValues(
                 new AbstractCrdtStore.AddCrdtCommand(crdt1),
                 new AbstractCrdtStore.AddCrdtCommand(crdt2),
                 command1_1,
@@ -127,9 +149,9 @@ public class LocalCrdtStoreTest {
                 command4_3
         );
 
-        replica1Subscriber.assertNotComplete();
-        replica1Subscriber.assertNoErrors();
-        replica1Subscriber.assertValues(
+        store1Subscriber.assertNotComplete();
+        store1Subscriber.assertNoErrors();
+        store1Subscriber.assertValues(
                 new AbstractCrdtStore.AddCrdtCommand(crdt1),
                 new AbstractCrdtStore.AddCrdtCommand(crdt2),
                 command1_1,
@@ -148,16 +170,16 @@ public class LocalCrdtStoreTest {
     @SuppressWarnings("unchecked")
     public void shouldSendAllCommandsAfterConnect() {
         // given:
-        final LocalCrdtStore replica1 = new LocalCrdtStore();
-        final TestSubscriber<CrdtCommand> replica1Subscriber = TestSubscriber.create();
-        replica1.subscribe(replica1Subscriber);
+        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final TestSubscriber<CrdtCommand> store1Subscriber = TestSubscriber.create();
+        store1.subscribe(store1Subscriber);
 
-        final LocalCrdtStore replica2 = new LocalCrdtStore();
-        final TestSubscriber<CrdtCommand> replica2Subscriber = TestSubscriber.create();
-        replica2.subscribe(replica2Subscriber);
+        final LocalCrdtStore store2 = new LocalCrdtStore();
+        final TestSubscriber<CrdtCommand> store2Subscriber = TestSubscriber.create();
+        store2.subscribe(store2Subscriber);
 
-        final SimpleCrdt crdt1 = replica1.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_1");
-        final SimpleCrdt crdt2 = replica2.createCrdt(LocalCrdtStoreTest::createCrdt, "ID_2");
+        final SimpleCrdt crdt1 = store1.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_1);
+        final SimpleCrdt crdt2 = store2.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_2);
 
         final CrdtCommand command1_1 = new CrdtCommand(crdt1.getId()) {};
         crdt1.sendCommands(command1_1);
@@ -176,12 +198,12 @@ public class LocalCrdtStoreTest {
         crdt2.sendCommands(command4_1, command4_2, command4_3);
 
         // when:
-        replica1.connect(replica2);
+        store1.connect(store2);
 
         // then:
-        replica1Subscriber.assertNotComplete();
-        replica1Subscriber.assertNoErrors();
-        replica1Subscriber.assertValues(
+        store1Subscriber.assertNotComplete();
+        store1Subscriber.assertNoErrors();
+        store1Subscriber.assertValues(
                 new AbstractCrdtStore.AddCrdtCommand(crdt1),
                 command1_1,
                 command3_1,
@@ -194,9 +216,9 @@ public class LocalCrdtStoreTest {
                 command4_3
         );
 
-        replica2Subscriber.assertNotComplete();
-        replica2Subscriber.assertNoErrors();
-        replica2Subscriber.assertValues(
+        store2Subscriber.assertNotComplete();
+        store2Subscriber.assertNoErrors();
+        store2Subscriber.assertValues(
                 new AbstractCrdtStore.AddCrdtCommand(crdt2),
                 command2_1,
                 command4_1,
