@@ -59,6 +59,9 @@ public class PNCounter implements Crdt {
     }
 
     public void increment(long value) {
+        if (value < 1L) {
+            throw new IllegalArgumentException("Value needs to be a positive number.");
+        }
         pEntries = pEntries.put(nodeId, pEntries.get(nodeId).getOrElse(0L) + value);
         commands.onNext(new UpdateCommand(
                 id,
@@ -72,6 +75,9 @@ public class PNCounter implements Crdt {
     }
 
     public void decrement(long value) {
+        if (value < 1L) {
+            throw new IllegalArgumentException("Value needs to be a positive number.");
+        }
         nEntries = nEntries.put(nodeId, nEntries.get(nodeId).getOrElse(0L) + value);
         commands.onNext(new UpdateCommand(
                 id,

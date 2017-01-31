@@ -57,6 +57,9 @@ public class GCounter implements Crdt {
     }
 
     public void increment(long value) {
+        if (value < 1L) {
+            throw new IllegalArgumentException("Value needs to be a positive number.");
+        }
         entries = entries.put(nodeId, entries.get(nodeId).getOrElse(0L) + value);
         commands.onNext(new UpdateCommand(
                 id,

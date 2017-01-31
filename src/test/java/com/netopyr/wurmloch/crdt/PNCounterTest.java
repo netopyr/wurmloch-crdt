@@ -52,6 +52,34 @@ public class PNCounterTest {
         new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), null);
     }
 
+    @SuppressWarnings("unchecked")
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void incrementingByNullShouldFail() {
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        counter.increment(0L);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void incrementingByANegativeValueShouldFail() {
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        counter.increment(-1L);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void decrementingByNullShouldFail() {
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        counter.decrement(0L);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void decrementingByANegativeValueShouldFail() {
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        counter.decrement(-1L);
+    }
+
 
     @SuppressWarnings("unchecked")
     @Test

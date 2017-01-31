@@ -52,6 +52,20 @@ public class GCounterTest {
         new GCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), null);
     }
 
+    @SuppressWarnings("unchecked")
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void incrementingByNullShouldFail() {
+        final GCounter counter = new GCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        counter.increment(0L);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Test(expectedExceptions = IllegalArgumentException.class)
+    public void incrementingByANegativeValueShouldFail() {
+        final GCounter counter = new GCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        counter.increment(-1L);
+    }
+
 
     @SuppressWarnings("unchecked")
     @Test
