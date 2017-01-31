@@ -31,22 +31,23 @@ But wurmloch-crdt also contains a local implementation LocalCrdtStore, which con
 The following examples creates two LocalCrdtStores in which our first CRDT, a G-Set, is created.
 
 ```java
-// create two LocalCrdtStores
-final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
-final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
-
-// create a new G-Set
-crdtStore1.createGSet("ID_1");
-
-// at this point the LocalCrdtStores are not connected, therefore the new G-Set is unknown in the second store
-assertThat(crdtStore2.findCrdt("ID_1").isDefined(), is(false));
-
-// connect both stores
-crdtStore1.connect(crdtStore2);
-
-// now the new G-Set is also known in the second store
-assertThat(crdtStore2.findCrdt("ID_1").isDefined(), is(true));
+    // create two LocalCrdtStores
+    final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+    
+    // create a new G-Set
+    crdtStore1.createGSet("ID_1");
+    
+    // at this point the LocalCrdtStores are not connected, therefore the new G-Set is unknown in the second store
+    assertThat(crdtStore2.findCrdt("ID_1").isDefined(), is(false));
+    
+    // connect both stores
+    crdtStore1.connect(crdtStore2);
+    
+    // now the new G-Set is also known in the second store
+    assertThat(crdtStore2.findCrdt("ID_1").isDefined(), is(true));
 ```
+_Code Sample 1: Using the LocalCrdtStore (see [CrdtStoreExample][class crdtstoreexample])_
 
 ### G-Set 
 
@@ -96,8 +97,51 @@ crdtStore1.connect(crdtStore2);
 MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
 MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
 ```
+_Code Sample 2: Using a GSet (see [GSetExample][class gsetexample])_
 
 ### G-Counter
+
+A G-Counter or increment-only Counter is - as the name suggests - an integer counter, that one can only incremented.
+It has methods to increment and request the current value.
+When synchronized, the value converges towards the sum of all increments.
+
+```java
+// create two LocalCrdtStores and connect them
+final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+crdtStore1.connect(crdtStore2);
+
+// create a G-Counter and find the according replica in the second store
+final GCounter replica1 = crdtStore1.createGCounter("ID_1");
+final GCounter replica2 = crdtStore2.findGCounter("ID_1").get();
+
+// increment both replicas of the counter
+replica1.increment();
+replica2.increment(2L);
+
+// the stores are connected, thus the replicas are automatically synchronized
+MatcherAssert.assertThat(replica1.get(), is(3L));
+MatcherAssert.assertThat(replica2.get(), is(3L));
+
+// disconnect the stores simulating a network issue, offline mode etc.
+crdtStore1.disconnect(crdtStore2);
+
+// increment both counters again
+replica1.increment(3L);
+replica2.increment(5L);
+
+// the stores are not connected, thus the changes have only local effects
+MatcherAssert.assertThat(replica1.get(), is(6L));
+MatcherAssert.assertThat(replica2.get(), is(8L));
+
+// reconnect the stores
+crdtStore1.connect(crdtStore2);
+
+// the counter is synchronized automatically and contains now the sum of all increments
+MatcherAssert.assertThat(replica1.get(), is(11L));
+MatcherAssert.assertThat(replica2.get(), is(11L));
+```
+_Code Sample 3: Using a GCounter (see [GCounterExample][class gcounterexample])_
 
 ### PN-Counter
 
@@ -116,3 +160,6 @@ MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana"
 
 [wikipedia crdt]: https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type
 [crdt article]: http://hal.upmc.fr/file/index/docid/555588/filename/techreport.pdf
+[class crdtstoreexample]: src/main/java/com/netopyr/wurmloch/examples/CrdtStoreExample.java
+[class gsetexample]: src/main/java/com/netopyr/wurmloch/examples/GSetExample.java
+[class gcounterexample]: src/main/java/com/netopyr/wurmloch/examples/GCounterExample.java
