@@ -2,8 +2,8 @@ package com.netopyr.wurmloch.examples;
 
 import com.netopyr.wurmloch.crdt.GSet;
 import com.netopyr.wurmloch.store.LocalCrdtStore;
-import org.hamcrest.MatcherAssert;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 
 public class GSetExample {
@@ -24,8 +24,8 @@ public class GSetExample {
         replica2.add("banana");
 
         // the stores are connected, thus the G-Set is automatically synchronized
-        MatcherAssert.assertThat(replica1, containsInAnyOrder("apple", "banana"));
-        MatcherAssert.assertThat(replica2, containsInAnyOrder("apple", "banana"));
+        assertThat(replica1, containsInAnyOrder("apple", "banana"));
+        assertThat(replica2, containsInAnyOrder("apple", "banana"));
 
         // disconnect the stores simulating a network issue, offline mode etc.
         crdtStore1.disconnect(crdtStore2);
@@ -35,15 +35,15 @@ public class GSetExample {
         replica2.add("pear");
 
         // the stores are not connected, thus the changes have only local effects
-        MatcherAssert.assertThat(replica1, containsInAnyOrder("apple", "banana", "strawberry"));
-        MatcherAssert.assertThat(replica2, containsInAnyOrder("apple", "banana", "pear"));
+        assertThat(replica1, containsInAnyOrder("apple", "banana", "strawberry"));
+        assertThat(replica2, containsInAnyOrder("apple", "banana", "pear"));
 
         // reconnect the stores
         crdtStore1.connect(crdtStore2);
 
         // the G-Set is synchronized automatically and contains now all elements
-        MatcherAssert.assertThat(replica1, containsInAnyOrder("apple", "banana", "strawberry", "pear"));
-        MatcherAssert.assertThat(replica2, containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+        assertThat(replica1, containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+        assertThat(replica2, containsInAnyOrder("apple", "banana", "strawberry", "pear"));
 
     }
 }

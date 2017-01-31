@@ -97,7 +97,7 @@ All of the more complex CRDT-Sets, that also allow removes, are built on top of 
     MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
     MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
 ```
-_Code Sample 2: Using a GSet (see [GSetExample][class gsetexample])_
+_Code Sample 2: Using a G-Set (see [GSetExample][class gsetexample])_
 
 ### G-Counter
 
@@ -141,7 +141,7 @@ When synchronized, the value converges towards the sum of all increments.
     MatcherAssert.assertThat(replica1.get(), is(11L));
     MatcherAssert.assertThat(replica2.get(), is(11L));
 ```
-_Code Sample 3: Using a GCounter (see [GCounterExample][class gcounterexample])_
+_Code Sample 3: Using a G-Counter (see [GCounterExample][class gcounterexample])_
 
 ### PN-Counter
 
@@ -184,11 +184,165 @@ When synchronized, the value converges towards the sum of all increments minus t
     MatcherAssert.assertThat(replica1.get(), is(1L));
     MatcherAssert.assertThat(replica2.get(), is(1L));
 ```
-_Code Sample 4: Using a PNCounter (see [PNCounterExample][class pncounterexample])_
+_Code Sample 4: Using a PN-Counter (see [PNCounterExample][class pncounterexample])_
 
 ### LWW-Register
 
+A Register stores a single Object.
+It contains a get()- and a set()-method to read and write the value.
+In an LWW-Register (Last-Writer-Wins Register), the last set-call will supersede previous calls.
+Internally a LWWRegister uses a [VectorClock][wiki vectorclock] to keep track of the time.
+If two updates happen concurrently in disconnected replicas, the one from the store with the smaller Id will take precedence.
+
+Please note that a last-writer-wins strategy results in data loss, if data is modified concurrently.
+This is ok in some use-cases, but has to be avoided in others.
+MV-Registers (see below) provide a much more sophisticated logic for these kind of cases.
+
+```java
+    // create two LocalCrdtStores and connect them
+    final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+    crdtStore1.connect(crdtStore2);
+    
+    // create an LWW-Register and find the according replica in the second store
+    final LWWRegister<String> replica1 = crdtStore1.createLWWRegister("ID_1");
+    final LWWRegister<String> replica2 = crdtStore2.<String>findLWWRegister("ID_1").get();
+    
+    // set values in both replicas
+    replica1.set("apple");
+    replica2.set("banana");
+    
+    // the stores are connected, thus the last write wins
+    assertThat(replica1.get(), is("banana"));
+    assertThat(replica2.get(), is("banana"));
+    
+    
+    // disconnect the stores simulating a network issue, offline mode etc.
+    crdtStore1.disconnect(crdtStore2);
+    
+    // add one entry to each replica
+    replica1.set("strawberry");
+    replica2.set("pear");
+    
+    // the stores are not connected, thus the changes have only local effects
+    assertThat(replica1.get(), is("strawberry"));
+    assertThat(replica2.get(), is("pear"));
+    
+    // reconnect the stores
+    crdtStore1.connect(crdtStore2);
+    
+    // the LWW-Register is synchronized automatically.
+    // as the update happened concurrently, the update from the node with the smaller Id wins
+    assertThat(replica1.get(), is("strawberry"));
+    assertThat(replica2.get(), is("strawberry"));
+```
+_Code Sample 5: Using an LWW-Register (see [LWWRegisterExample][class lwwregisterexample])_
+
 ### MV-Register
+
+An MV-Register (Multi-Value Register) is another implementation of a register.
+It avoids the kind of data loss, that is inherent to any kind of last-writer-wins strategy.
+Instead if the value of a MV-Register is changed concurrently, it keeps all values.
+Therefore the result of the get()-method is a collection.
+
+```java
+    // create two LocalCrdtStores and connect them
+    final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+    crdtStore1.connect(crdtStore2);
+
+    // create an MV-Register and find the according replica in the second store
+    final MVRegister<String> replica1 = crdtStore1.createMVRegister("ID_1");
+    final MVRegister<String> replica2 = crdtStore2.<String>findMVRegister("ID_1").get();
+
+    // set values in both replicas
+    replica1.set("apple");
+    replica2.set("banana");
+
+    // the stores are connected, thus we can determine the order of both writes
+    // the latter write overrides the previous one
+    assertThat(replica1.get(), contains("banana"));
+    assertThat(replica2.get(), contains("banana"));
+
+    // disconnect the stores simulating a network issue, offline mode etc.
+    crdtStore1.disconnect(crdtStore2);
+
+    // change the value in both replicas
+    replica1.set("strawberry");
+    replica2.set("pear");
+
+    // the stores are not connected, thus the changes have only local effects
+    assertThat(replica1.get(), contains("strawberry"));
+    assertThat(replica2.get(), contains("pear"));
+
+    // reconnect the stores
+    crdtStore1.connect(crdtStore2);
+
+    // as the update happened concurrently, we cannot determine an order and both values are kept
+    assertThat(replica1.get(), containsInAnyOrder("strawberry", "pear"));
+    assertThat(replica2.get(), containsInAnyOrder("strawberry", "pear"));
+
+    // update the value one more time
+    replica2.set("orange");
+
+    // the last update was clearly after the concurrent ones, therefore both replicas contain the last value only
+    assertThat(replica1.get(), contains("orange"));
+    assertThat(replica2.get(), contains("orange"));
+```
+_Code Sample 6: Using an MV-Register (see [MVRegisterExample][class mvregisterexample])_
+
+Note that a MV-Register is not a Set.
+As can be seen in the following more complex example, an MV-Register keeps track of which values were overriden and can be eliminated.
+
+```java
+    // create three LocalCrdtStores and connect them
+    final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore3 = new LocalCrdtStore();
+    crdtStore2.connect(crdtStore1);
+    crdtStore2.connect(crdtStore3);
+
+    // create an MV-Register and find the according replica in the other stores
+    final MVRegister<String> replica1 = crdtStore1.createMVRegister("ID_1");
+    final MVRegister<String> replica2 = crdtStore2.<String>findMVRegister("ID_1").get();
+    final MVRegister<String> replica3 = crdtStore3.<String>findMVRegister("ID_1").get();
+
+    // disconnect store 2 and 3
+    crdtStore2.disconnect(crdtStore3);
+
+    // set some values
+    replica1.set("apple");
+    replica3.set("banana");
+
+    // store 1 and 2 contain "apple", store 3 contains "banana"
+    assertThat(replica1.get(), containsInAnyOrder("apple"));
+    assertThat(replica2.get(), containsInAnyOrder("apple"));
+    assertThat(replica3.get(), containsInAnyOrder("banana"));
+
+    // disconnect store 1 and 2 and connect store 2 and 3 instead
+    crdtStore2.disconnect(crdtStore1);
+    crdtStore2.connect(crdtStore3);
+
+    // set the register in store 1 to "strawberry"
+    replica1.set("strawberry");
+
+    // store 1 still contains "strawberry" only
+    // store 2 and 3 are synchronized and contain "apple" and "banana", because these updates happened concurrently
+    assertThat(replica1.get(), containsInAnyOrder("strawberry"));
+    assertThat(replica2.get(), containsInAnyOrder("apple", "banana"));
+    assertThat(replica3.get(), containsInAnyOrder("apple", "banana"));
+
+    // connect all stores again
+    crdtStore2.connect(crdtStore1);
+
+    // the result is not simply the union of all values
+    // "apple" was overridden by "strawberry", therefore it disappears now
+    // "banana" and "strawberry" were set concurrently, thus both values are still in the result
+    assertThat(replica1.get(), containsInAnyOrder("banana", "strawberry"));
+    assertThat(replica2.get(), containsInAnyOrder("banana", "strawberry"));
+    assertThat(replica3.get(), containsInAnyOrder("banana", "strawberry"));
+```
+_Code Sample 7: A more complex example using an MV-Register (see [MVRegisterComplexExample][class mvregistercomplexexample])_
 
 ### OR-Set
 
@@ -201,7 +355,12 @@ _Code Sample 4: Using a PNCounter (see [PNCounterExample][class pncounterexample
 
 [wikipedia crdt]: https://en.wikipedia.org/wiki/Conflict-free_replicated_data_type
 [crdt article]: http://hal.upmc.fr/file/index/docid/555588/filename/techreport.pdf
+[wiki vectorclock]: https://en.wikipedia.org/wiki/Vector_clocks
+
 [class crdtstoreexample]: src/main/java/com/netopyr/wurmloch/examples/CrdtStoreExample.java
 [class gsetexample]: src/main/java/com/netopyr/wurmloch/examples/GSetExample.java
 [class gcounterexample]: src/main/java/com/netopyr/wurmloch/examples/GCounterExample.java
 [class pncounterexample]: src/main/java/com/netopyr/wurmloch/examples/PNCounterExample.java
+[class lwwregisterexample]: src/main/java/com/netopyr/wurmloch/examples/LWWRegisterExample.java
+[class mvregisterexample]: src/main/java/com/netopyr/wurmloch/examples/MVRegisterExample.java
+[class mvregistercomplexexample]: src/main/java/com/netopyr/wurmloch/examples/MVRegisterComplexExample.java
