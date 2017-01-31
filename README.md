@@ -62,40 +62,40 @@ Also it is a common practice to build complex CRDTs upon simple CRDTs.
 All of the more complex CRDT-Sets, that also allow removes, are built on top of G-Sets.
 
 ```java
-// create two LocalCrdtStores and connect them
-final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
-final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
-crdtStore1.connect(crdtStore2);
-
-// create a G-Set and find the according replica in the second store
-final GSet<String> replica1 = crdtStore1.createGSet("ID_1");
-final GSet<String> replica2 = crdtStore2.<String>findGSet("ID_1").get();
-
-// add one entry to each replica
-replica1.add("apple");
-replica2.add("banana");
-
-// the stores are connected, thus the G-Set is automatically synchronized
-MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana"));
-MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana"));
-
-// disconnect the stores simulating a network issue, offline mode etc.
-crdtStore1.disconnect(crdtStore2);
-
-// add one entry to each replica
-replica1.add("strawberry");
-replica2.add("pear");
-
-// the stores are not connected, thus the changes have only local effects
-MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry"));
-MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "pear"));
-
-// reconnect the stores
-crdtStore1.connect(crdtStore2);
-
-// the G-Set is synchronized automatically and contains now all elements
-MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
-MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+    // create two LocalCrdtStores and connect them
+    final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+    crdtStore1.connect(crdtStore2);
+    
+    // create a G-Set and find the according replica in the second store
+    final GSet<String> replica1 = crdtStore1.createGSet("ID_1");
+    final GSet<String> replica2 = crdtStore2.<String>findGSet("ID_1").get();
+    
+    // add one entry to each replica
+    replica1.add("apple");
+    replica2.add("banana");
+    
+    // the stores are connected, thus the G-Set is automatically synchronized
+    MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana"));
+    MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana"));
+    
+    // disconnect the stores simulating a network issue, offline mode etc.
+    crdtStore1.disconnect(crdtStore2);
+    
+    // add one entry to each replica
+    replica1.add("strawberry");
+    replica2.add("pear");
+    
+    // the stores are not connected, thus the changes have only local effects
+    MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry"));
+    MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "pear"));
+    
+    // reconnect the stores
+    crdtStore1.connect(crdtStore2);
+    
+    // the G-Set is synchronized automatically and contains now all elements
+    MatcherAssert.assertThat(replica1, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
+    MatcherAssert.assertThat(replica2, Matchers.containsInAnyOrder("apple", "banana", "strawberry", "pear"));
 ```
 _Code Sample 2: Using a GSet (see [GSetExample][class gsetexample])_
 
@@ -106,44 +106,85 @@ It has methods to increment and request the current value.
 When synchronized, the value converges towards the sum of all increments.
 
 ```java
-// create two LocalCrdtStores and connect them
-final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
-final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
-crdtStore1.connect(crdtStore2);
-
-// create a G-Counter and find the according replica in the second store
-final GCounter replica1 = crdtStore1.createGCounter("ID_1");
-final GCounter replica2 = crdtStore2.findGCounter("ID_1").get();
-
-// increment both replicas of the counter
-replica1.increment();
-replica2.increment(2L);
-
-// the stores are connected, thus the replicas are automatically synchronized
-MatcherAssert.assertThat(replica1.get(), is(3L));
-MatcherAssert.assertThat(replica2.get(), is(3L));
-
-// disconnect the stores simulating a network issue, offline mode etc.
-crdtStore1.disconnect(crdtStore2);
-
-// increment both counters again
-replica1.increment(3L);
-replica2.increment(5L);
-
-// the stores are not connected, thus the changes have only local effects
-MatcherAssert.assertThat(replica1.get(), is(6L));
-MatcherAssert.assertThat(replica2.get(), is(8L));
-
-// reconnect the stores
-crdtStore1.connect(crdtStore2);
-
-// the counter is synchronized automatically and contains now the sum of all increments
-MatcherAssert.assertThat(replica1.get(), is(11L));
-MatcherAssert.assertThat(replica2.get(), is(11L));
+    // create two LocalCrdtStores and connect them
+    final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+    crdtStore1.connect(crdtStore2);
+    
+    // create a G-Counter and find the according replica in the second store
+    final GCounter replica1 = crdtStore1.createGCounter("ID_1");
+    final GCounter replica2 = crdtStore2.findGCounter("ID_1").get();
+    
+    // increment both replicas of the counter
+    replica1.increment();
+    replica2.increment(2L);
+    
+    // the stores are connected, thus the replicas are automatically synchronized
+    MatcherAssert.assertThat(replica1.get(), is(3L));
+    MatcherAssert.assertThat(replica2.get(), is(3L));
+    
+    // disconnect the stores simulating a network issue, offline mode etc.
+    crdtStore1.disconnect(crdtStore2);
+    
+    // increment both counters again
+    replica1.increment(3L);
+    replica2.increment(5L);
+    
+    // the stores are not connected, thus the changes have only local effects
+    MatcherAssert.assertThat(replica1.get(), is(6L));
+    MatcherAssert.assertThat(replica2.get(), is(8L));
+    
+    // reconnect the stores
+    crdtStore1.connect(crdtStore2);
+    
+    // the counter is synchronized automatically and contains now the sum of all increments
+    MatcherAssert.assertThat(replica1.get(), is(11L));
+    MatcherAssert.assertThat(replica2.get(), is(11L));
 ```
 _Code Sample 3: Using a GCounter (see [GCounterExample][class gcounterexample])_
 
 ### PN-Counter
+
+A PN-Counter is an integer-counter, that can be incremented and decremented.
+When synchronized, the value converges towards the sum of all increments minus the sum of all decrements.
+
+```java
+    // create two LocalCrdtStores and connect them
+    final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
+    final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+    crdtStore1.connect(crdtStore2);
+    
+    // create a PN-Counter and find the according replica in the second store
+    final PNCounter replica1 = crdtStore1.createPNCounter("ID_1");
+    final PNCounter replica2 = crdtStore2.findPNCounter("ID_1").get();
+    
+    // change the value of both replicas of the counter
+    replica1.increment();
+    replica2.decrement(2L);
+    
+    // the stores are connected, thus the replicas are automatically synchronized
+    MatcherAssert.assertThat(replica1.get(), is(-1L));
+    MatcherAssert.assertThat(replica2.get(), is(-1L));
+    
+    // disconnect the stores simulating a network issue, offline mode etc.
+    crdtStore1.disconnect(crdtStore2);
+    
+    // update both counters again
+    replica1.decrement(3L);
+    replica2.increment(5L);
+    
+    // the stores are not connected, thus the changes have only local effects
+    MatcherAssert.assertThat(replica1.get(), is(-4L));
+    MatcherAssert.assertThat(replica2.get(), is(4L));
+    
+    // reconnect the stores
+    crdtStore1.connect(crdtStore2);
+    
+    // the counter is synchronized automatically and contains now the sum of all increments minus all decrements
+    MatcherAssert.assertThat(replica1.get(), is(1L));
+    MatcherAssert.assertThat(replica2.get(), is(1L));
+```
+_Code Sample 4: Using a PNCounter (see [PNCounterExample][class pncounterexample])_
 
 ### LWW-Register
 
@@ -163,3 +204,4 @@ _Code Sample 3: Using a GCounter (see [GCounterExample][class gcounterexample])_
 [class crdtstoreexample]: src/main/java/com/netopyr/wurmloch/examples/CrdtStoreExample.java
 [class gsetexample]: src/main/java/com/netopyr/wurmloch/examples/GSetExample.java
 [class gcounterexample]: src/main/java/com/netopyr/wurmloch/examples/GCounterExample.java
+[class pncounterexample]: src/main/java/com/netopyr/wurmloch/examples/PNCounterExample.java
