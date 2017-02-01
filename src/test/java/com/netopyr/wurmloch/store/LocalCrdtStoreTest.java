@@ -101,7 +101,7 @@ public class LocalCrdtStoreTest {
 
     @Test
     @SuppressWarnings("unchecked")
-    public void shouldSendCommandsToConnectedstore() {
+    public void shouldSendCommandsToConnectedStore() {
         // given:
         final LocalCrdtStore store1 = new LocalCrdtStore();
         final TestSubscriber<CrdtCommand> store1Subscriber = TestSubscriber.create();
