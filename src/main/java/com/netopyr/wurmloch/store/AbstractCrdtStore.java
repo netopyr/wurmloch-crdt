@@ -23,6 +23,7 @@ import org.apache.commons.lang3.builder.ToStringStyle;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
+import java.util.Objects;
 import java.util.UUID;
 
 class AbstractCrdtStore implements CrdtStore {
@@ -50,56 +51,65 @@ class AbstractCrdtStore implements CrdtStore {
 
     @Override
     public <T extends Crdt> T createCrdt(Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, T> factory, String id) {
-        final T result = factory.apply(nodeId, id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(factory, "factory must not be null");
+        Objects.requireNonNull(id, "id must not be null");
+        final T result = factory.apply(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
 
     @Override
     public <T> LWWRegister<T> createLWWRegister(String id) {
-        final LWWRegister<T> result = new LWWRegister<>(nodeId, id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(id, "id must not be null");
+        final LWWRegister<T> result = new LWWRegister<>(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
 
     @Override
     public <T> MVRegister<T> createMVRegister(String id) {
-        final MVRegister<T> result = new MVRegister<>(nodeId, id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(id, "id must not be null");
+        final MVRegister<T> result = new MVRegister<>(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
 
     @Override
     public GCounter createGCounter(String id) {
-        final GCounter result = new GCounter(nodeId, id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(id, "id must not be null");
+        final GCounter result = new GCounter(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
 
     @Override
     public PNCounter createPNCounter(String id) {
-        final PNCounter result = new PNCounter(nodeId, id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(id, "id must not be null");
+        final PNCounter result = new PNCounter(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
 
     @Override
     public <T> GSet<T> createGSet(String id) {
-        final GSet<T> result = new GSet<>(id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(id, "id must not be null");
+        final GSet<T> result = new GSet<>(id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
 
     @Override
     public <T> ORSet<T> createORSet(String id) {
-        final ORSet<T> result = new ORSet<>(id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(id, "id must not be null");
+        final ORSet<T> result = new ORSet<>(id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
 
     @Override
     public <T> RGA<T> createRGA(String id) {
-        final RGA<T> result = new RGA<>(nodeId, id, outCommands, new ReplicaSubscriber());
+        Objects.requireNonNull(id, "id must not be null");
+        final RGA<T> result = new RGA<>(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
         register(result);
         return result;
     }
