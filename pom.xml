@@ -3,7 +3,7 @@
 
     <groupId>com.netopyr.wurmloch</groupId>
     <artifactId>wurmloch-crdt</artifactId>
-    <version>0.1.0</version>
+    <version>0.1.1-SNAPSHOT</version>
 
     <name>Wurmloch CRDT</name>
     <description>Experimental CRDT-implementations for the JVM</description>
@@ -33,7 +33,7 @@
         <connection>scm:git:https://github.com/netopyr/wurmloch-crdt.git</connection>
         <developerConnection>scm:git:git@github.com:netopyr/wurmloch-crdt.git</developerConnection>
         <url>https://github.com/netopyr/wurmloch-crdt</url>
-        <tag>0.1.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <distributionManagement>
