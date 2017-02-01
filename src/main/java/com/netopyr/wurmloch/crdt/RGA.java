@@ -6,6 +6,8 @@ import javaslang.Function4;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import javaslang.control.Option;
+import org.apache.commons.lang3.builder.EqualsBuilder;
+import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 import org.reactivestreams.Processor;
@@ -197,6 +199,28 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
         }
 
         @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+
+            if (o == null || getClass() != o.getClass()) return false;
+
+            RemoveCommand that = (RemoveCommand) o;
+
+            return new EqualsBuilder()
+                    .appendSuper(super.equals(o))
+                    .append(clock, that.clock)
+                    .isEquals();
+        }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(17, 37)
+                    .appendSuper(super.hashCode())
+                    .append(clock)
+                    .toHashCode();
+        }
+
+        @Override
         public String toString() {
             return new ToStringBuilder(this, ToStringStyle.SHORT_PREFIX_STYLE)
                     .appendSuper(super.toString())
@@ -216,6 +240,32 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
             this.anchorClock = Objects.requireNonNull(anchorClock, "AnchorClock must not be null");
             this.newVertexValue = Objects.requireNonNull(newVertexValue, "NewVertexValue must not be null");
             this.newVertexClock = Objects.requireNonNull(newVertexClock, "NewVertexClock must not be null");
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+
+            if (o == null || getClass() != o.getClass()) return false;
+
+            AddRightCommand<?> that = (AddRightCommand<?>) o;
+
+            return new EqualsBuilder()
+                    .appendSuper(super.equals(o))
+                    .append(anchorClock, that.anchorClock)
+                    .append(newVertexValue, that.newVertexValue)
+                    .append(newVertexClock, that.newVertexClock)
+                    .isEquals();
+        }
+
+        @Override
+        public int hashCode() {
+            return new HashCodeBuilder(17, 37)
+                    .appendSuper(super.hashCode())
+                    .append(anchorClock)
+                    .append(newVertexValue)
+                    .append(newVertexClock)
+                    .toHashCode();
         }
 
         @Override

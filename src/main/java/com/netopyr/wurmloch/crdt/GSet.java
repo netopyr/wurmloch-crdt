@@ -106,7 +106,7 @@ public class GSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T>
             AddCommand<?> that = (AddCommand<?>) o;
 
             return new EqualsBuilder()
-                    .append(getCrdtId(), that.getCrdtId())
+                    .appendSuper(super.equals(o))
                     .append(element, that.element)
                     .isEquals();
         }
@@ -114,7 +114,7 @@ public class GSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T>
         @Override
         public int hashCode() {
             return new HashCodeBuilder(17, 37)
-                    .append(getCrdtId())
+                    .appendSuper(super.hashCode())
                     .append(element)
                     .toHashCode();
         }
