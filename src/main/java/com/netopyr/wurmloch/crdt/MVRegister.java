@@ -27,7 +27,7 @@ public class MVRegister<T> implements Crdt {
         this.id = Objects.requireNonNull(id, "Id must not be null");
         inCommands = Objects.requireNonNull(inCommands, "InCommands must not be null");
         outCommands = Objects.requireNonNull(outCommands, "OutCommands must not be null");
-        inCommands.subscribe(new CrdtSubscriber(id, this::processCommand));
+        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
         commands.subscribe(outCommands);
     }
 

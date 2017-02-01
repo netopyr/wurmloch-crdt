@@ -30,7 +30,7 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
 
     public ORSet(String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
         this.id = Objects.requireNonNull(id, "Id must not be null");
-        inCommands.subscribe(new CrdtSubscriber(id, this::processCommand));
+        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
         commands.subscribe(outCommands);
     }
 

@@ -36,7 +36,7 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
         this.start = new Vertex<>(null, clock);
         this.vertices = HashMap.of(clock, start);
 
-        inCommands.subscribe(new CrdtSubscriber(crtdId, this::processCommand));
+        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
         commands.subscribe(outCommands);
     }
 

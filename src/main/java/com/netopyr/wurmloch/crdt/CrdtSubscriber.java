@@ -1,34 +1,40 @@
 package com.netopyr.wurmloch.crdt;
 
-import io.reactivex.subscribers.DisposableSubscriber;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import java.util.Objects;
 import java.util.function.Consumer;
 
-public class CrdtSubscriber extends DisposableSubscriber<CrdtCommand> {
+public class CrdtSubscriber implements Subscriber<CrdtCommand> {
 
-    private final String crdtId;
     private final Consumer<CrdtCommand> consumer;
 
-    public CrdtSubscriber(String crdtId, Consumer<CrdtCommand> consumer) {
-        this.crdtId = crdtId;
+    private Subscription subscription;
+
+    public CrdtSubscriber(Consumer<CrdtCommand> consumer) {
         this.consumer = consumer;
     }
 
     @Override
+    public void onSubscribe(Subscription subscription) {
+        this.subscription = Objects.requireNonNull(subscription, "subscription must not be null");
+        subscription.request(1L);
+    }
+
+    @Override
     public void onNext(CrdtCommand crdtCommand) {
-        if (Objects.equals(crdtCommand.getCrdtId(), crdtId)) {
-            consumer.accept(crdtCommand);
-        }
+        consumer.accept(crdtCommand);
+        subscription.request(1L);
     }
 
     @Override
     public void onError(Throwable throwable) {
-        cancel();
+        // ignore
     }
 
     @Override
     public void onComplete() {
-        cancel();
+        // ignore
     }
 }

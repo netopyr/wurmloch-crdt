@@ -9,12 +9,14 @@ import com.netopyr.wurmloch.crdt.MVRegister;
 import com.netopyr.wurmloch.crdt.ORSet;
 import com.netopyr.wurmloch.crdt.PNCounter;
 import com.netopyr.wurmloch.crdt.RGA;
-import io.reactivex.Flowable;
+import io.reactivex.processors.PublishProcessor;
 import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.DisposableSubscriber;
 import javaslang.Function4;
 import javaslang.collection.HashMap;
+import javaslang.collection.HashSet;
 import javaslang.collection.Map;
+import javaslang.collection.Set;
 import javaslang.control.Option;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
@@ -28,11 +30,16 @@ import java.util.UUID;
 
 class AbstractCrdtStore implements CrdtStore {
 
+    private Set<CrdtCommand> commands = HashSet.empty();
+
     private final String nodeId;
-    private final ReplayProcessor<CrdtCommand> commandProcessor = ReplayProcessor.create();
-    private final Flowable<CrdtCommand> outCommands = commandProcessor.distinct();
+    private final PublishProcessor<CrdtCommand> inCommandsEntry = PublishProcessor.create();
+    private final PublishProcessor<CrdtCommand> inCommandsExit = PublishProcessor.create();
+    private final PublishProcessor<CrdtCommand> outCommandsEntry = PublishProcessor.create();
+    private final ReplayProcessor<CrdtCommand> outCommandsExit = ReplayProcessor.create();
 
     private Map<String, Crdt> crdts = HashMap.empty();
+
 
 
     AbstractCrdtStore() {
@@ -40,6 +47,15 @@ class AbstractCrdtStore implements CrdtStore {
     }
     AbstractCrdtStore(String nodeId) {
         this.nodeId = nodeId;
+        inCommandsEntry
+                .filter(command -> ! commands.contains(command))
+                .doOnNext(command -> commands = commands.add(command))
+                .subscribe(inCommandsExit);
+        outCommandsEntry
+                .doOnNext(command -> commands = commands.add(command))
+                .subscribe(outCommandsExit);
+        inCommandsExit.subscribe(outCommandsEntry);
+//        distinctInCommands.subscribe(outCommands);
     }
 
 
@@ -53,7 +69,7 @@ class AbstractCrdtStore implements CrdtStore {
     public <T extends Crdt> T createCrdt(Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, T> factory, String id) {
         Objects.requireNonNull(factory, "factory must not be null");
         Objects.requireNonNull(id, "id must not be null");
-        final T result = factory.apply(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final T result = factory.apply(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -61,7 +77,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> LWWRegister<T> createLWWRegister(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final LWWRegister<T> result = new LWWRegister<>(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final LWWRegister<T> result = new LWWRegister<>(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -69,7 +85,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> MVRegister<T> createMVRegister(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final MVRegister<T> result = new MVRegister<>(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final MVRegister<T> result = new MVRegister<>(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -77,7 +93,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public GCounter createGCounter(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final GCounter result = new GCounter(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final GCounter result = new GCounter(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -85,7 +101,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public PNCounter createPNCounter(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final PNCounter result = new PNCounter(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final PNCounter result = new PNCounter(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -93,7 +109,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> GSet<T> createGSet(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final GSet<T> result = new GSet<>(id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final GSet<T> result = new GSet<>(id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -101,7 +117,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> ORSet<T> createORSet(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final ORSet<T> result = new ORSet<>(id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final ORSet<T> result = new ORSet<>(id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -109,7 +125,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> RGA<T> createRGA(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final RGA<T> result = new RGA<>(nodeId, id, outCommands.filter(command -> Objects.equals(id, command.getCrdtId())), new ReplicaSubscriber());
+        final RGA<T> result = new RGA<>(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
         register(result);
         return result;
     }
@@ -117,12 +133,12 @@ class AbstractCrdtStore implements CrdtStore {
     private void register(Crdt crdt) {
         crdts = crdts.put(crdt.getId(), crdt);
         final AddCrdtCommand command = new AddCrdtCommand(crdt);
-        commandProcessor.onNext(command);
+        outCommandsEntry.onNext(command);
     }
 
     @Override
     public void subscribe(Subscriber<? super CrdtCommand> subscriber) {
-        outCommands.subscribe(subscriber);
+        outCommandsExit.subscribe(subscriber);
     }
 
     protected class ReplicaSubscriber extends DisposableSubscriber<CrdtCommand> {
@@ -130,12 +146,18 @@ class AbstractCrdtStore implements CrdtStore {
         @Override
         public void onNext(CrdtCommand command) {
             if (AddCrdtCommand.class.equals(command.getClass())) {
-                if (findCrdt(command.getCrdtId()).isEmpty()) {
-                    final Crdt crdt = ((AddCrdtCommand) command).getFactory().apply(nodeId, command.getCrdtId(), outCommands, new ReplicaSubscriber());
+                final String crdtId = command.getCrdtId();
+                if (findCrdt(crdtId).isEmpty()) {
+                    final Crdt crdt = ((AddCrdtCommand) command).getFactory().apply(
+                            nodeId,
+                            crdtId,
+                            inCommandsExit.filter(c -> Objects.equals(crdtId, c.getCrdtId())),
+                            outCommandsEntry
+                    );
                     crdts = crdts.put(crdt.getId(), crdt);
                 }
             }
-            commandProcessor.onNext(command);
+            inCommandsEntry.onNext(command);
         }
 
         @Override
