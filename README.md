@@ -1,6 +1,10 @@
 # wurmloch-crdt
 Experimental implementations of conflict-free replicated data types (CRDTs) for the JVM
 
+[![Bintray](https://img.shields.io/bintray/v/netopyr/wurmloch/wurmloch-crdt.svg?colorB=0081c4)](https://bintray.com/netopyr/wurmloch/wurmloch-crdt)
+[![Maven](https://img.shields.io/maven-central/v/com.netopyr.wurmloch/wurmloch-crdt.svg)](https://search.maven.org/#search|ga|1|com.netopyr.wurmloch)
+
+
 ## What is a CRDT?
 
 A conflict-free replicated data type (abbreviated CRDT) can be used in distributed computing to share data between nodes.
@@ -9,9 +13,23 @@ Each node contains its private copy of a CRDT (called replica), which it modifie
 However, when two replicas are connected, they can synchronize automatically in the background.
 To achieve that, CRDTs are designed in such a way that there can never be any conflicts between concurrent updates.
 
-## How can I use wurmloch-crdt?
+## Adding wurmloch-crdt to your project
 
-_TBD_
+### Maven
+```xml
+  <dependency>
+    <groupId>com.netopyr.wurmloch</groupId>
+    <artifactId>wurmloch-crdt</artifactId>
+    <version>0.1.0</version>
+  </dependency>
+```
+
+### Gradle
+```groovy
+  dependencies {
+      compile 'com.netopyr.wurmloch:wurmloch-crdt:0.1.0'
+  }
+```
 
 ## Examples
 
