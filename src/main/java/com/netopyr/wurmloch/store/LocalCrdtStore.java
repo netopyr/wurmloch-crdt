@@ -4,7 +4,7 @@ import io.reactivex.disposables.Disposable;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 
-public class LocalCrdtStore extends AbstractCrdtStore {
+public class LocalCrdtStore extends CrdtStore {
 
     private Map<LocalCrdtStore, Disposable> disposables = HashMap.empty();
 

@@ -136,8 +136,8 @@ public class LocalCrdtStoreTest {
         store1Subscriber.assertNotComplete();
         store1Subscriber.assertNoErrors();
         store1Subscriber.assertValues(
-                new AbstractCrdtStore.AddCrdtCommand(crdt1),
-                new AbstractCrdtStore.AddCrdtCommand(crdt2),
+                new CrdtStore.AddCrdtCommand(crdt1),
+                new CrdtStore.AddCrdtCommand(crdt2),
                 command1_1,
                 command2_1,
                 command3_1,
@@ -151,8 +151,8 @@ public class LocalCrdtStoreTest {
         store1Subscriber.assertNotComplete();
         store1Subscriber.assertNoErrors();
         store1Subscriber.assertValues(
-                new AbstractCrdtStore.AddCrdtCommand(crdt1),
-                new AbstractCrdtStore.AddCrdtCommand(crdt2),
+                new CrdtStore.AddCrdtCommand(crdt1),
+                new CrdtStore.AddCrdtCommand(crdt2),
                 command1_1,
                 command2_1,
                 command3_1,
@@ -203,12 +203,12 @@ public class LocalCrdtStoreTest {
         store1Subscriber.assertNotComplete();
         store1Subscriber.assertNoErrors();
         store1Subscriber.assertValues(
-                new AbstractCrdtStore.AddCrdtCommand(crdt1),
+                new CrdtStore.AddCrdtCommand(crdt1),
                 command1_1,
                 command3_1,
                 command3_2,
                 command3_3,
-                new AbstractCrdtStore.AddCrdtCommand(crdt2),
+                new CrdtStore.AddCrdtCommand(crdt2),
                 command2_1,
                 command4_1,
                 command4_2,
@@ -218,12 +218,12 @@ public class LocalCrdtStoreTest {
         store2Subscriber.assertNotComplete();
         store2Subscriber.assertNoErrors();
         store2Subscriber.assertValues(
-                new AbstractCrdtStore.AddCrdtCommand(crdt2),
+                new CrdtStore.AddCrdtCommand(crdt2),
                 command2_1,
                 command4_1,
                 command4_2,
                 command4_3,
-                new AbstractCrdtStore.AddCrdtCommand(crdt1),
+                new CrdtStore.AddCrdtCommand(crdt1),
                 command1_1,
                 command3_1,
                 command3_2,
