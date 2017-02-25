@@ -1,14 +1,9 @@
 package com.netopyr.wurmloch.crdt;
 
-import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.TestSubscriber;
-import javaslang.Tuple;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import org.hamcrest.CustomMatcher;
-import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
 
 import java.util.Objects;
@@ -16,7 +11,6 @@ import java.util.Objects;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.mock;
 
 public class PNCounterTest {
 
@@ -25,86 +19,75 @@ public class PNCounterTest {
     private static final String CRDT_ID = "ID_1";
 
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullReplicaShouldThrow() {
-        new PNCounter(null, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        new PNCounter(null, CRDT_ID);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullIdShouldThrow() {
-        new PNCounter(NODE_ID_1, null, mock(Publisher.class), mock(Subscriber.class));
+        new PNCounter(NODE_ID_1, null);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
-    public void constructorWithNullPublisherShouldThrow() {
-        new PNCounter(NODE_ID_1, CRDT_ID, null, mock(Subscriber.class));
+    public void subscribingToNullPublisherShouldThrow() {
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
+        counter.subscribeTo(null);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
-    public void constructorWithNullSubscriberShouldThrow() {
-        new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), null);
+    public void subscribingNullSubscriberShouldThrow() {
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
+        counter.subscribe(null);
     }
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void incrementingByNullShouldFail() {
-        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
         counter.increment(0L);
     }
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = IllegalArgumentException.class)
-    public void incrementingByANegativeValueShouldFail() {
-        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+    public void incrementingByNegativeValueShouldFail() {
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
         counter.increment(-1L);
     }
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void decrementingByNullShouldFail() {
-        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
         counter.decrement(0L);
     }
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = IllegalArgumentException.class)
     public void decrementingByANegativeValueShouldFail() {
-        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
         counter.decrement(-1L);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test
     public void itShouldInitializeWithWaitingInCommands() {
         // given
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final PNCounter counter1 = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
+        final PNCounter counter1 = new PNCounter(NODE_ID_1, CRDT_ID);
         counter1.increment(42L);
-
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        inCommands2.onNext(outCommands1.values().get(0));
+        final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID);
 
         // when
-        final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID, inCommands2, mock(Subscriber.class));
+        counter1.connect(counter2);
 
         // then
         assertThat(counter2.get(), is(42L));
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test
     public void itShouldGetAndIncrementAndDecrementTheValue() {
         // given
-        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
 
         // when
         final Long v0 = counter.get();
@@ -142,12 +125,12 @@ public class PNCounterTest {
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test
     public void itShouldSendCommandsOnUpdates() {
         // given
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID, mock(Publisher.class), subscriber);
+        final PNCounter counter = new PNCounter(NODE_ID_1, CRDT_ID);
+        counter.subscribe(subscriber);
 
         // when
         counter.increment();
@@ -170,116 +153,36 @@ public class PNCounterTest {
     @Test
     public void itShouldAcceptUpdatesFromReceivedCommands() {
         // given
-        final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final PNCounter counter1 = new PNCounter(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final PNCounter counter1 = new PNCounter(NODE_ID_1, CRDT_ID);
+        final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID);
+        counter1.connect(counter2);
 
         // when
         counter1.increment();
-        inCommands2.onNext(outCommands1.values().get(0));
 
         // then
         assertThat(counter2.get(), is(1L));
-        outCommands2.assertNoValues();
-        outCommands2.assertNotComplete();
-        outCommands2.assertNoErrors();
 
         // when
         counter2.increment();
-        inCommands1.onNext(outCommands2.values().get(0));
 
         // then
         assertThat(counter1.get(), is(2L));
         assertThat(counter2.get(), is(2L));
-        assertThat(outCommands1.valueCount(), is(1));
-        outCommands1.assertNotComplete();
-        outCommands1.assertNoErrors();
 
         // when
         counter1.decrement();
-        inCommands2.onNext(outCommands1.values().get(1));
 
         // then
         assertThat(counter1.get(), is(1L));
         assertThat(counter2.get(), is(1L));
-        assertThat(outCommands2.valueCount(), is(1));
-        outCommands2.assertNotComplete();
-        outCommands2.assertNoErrors();
 
         // when
         counter2.decrement();
-        inCommands1.onNext(outCommands2.values().get(1));
 
         // then
         assertThat(counter1.get(), is(0L));
         assertThat(counter2.get(), is(0L));
-        assertThat(outCommands1.valueCount(), is(2));
-        outCommands1.assertNotComplete();
-        outCommands1.assertNoErrors();
-    }
-
-
-    @Test
-    public void itShouldIncludeOtherNodeValuesInCommands() {
-        // given
-        final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final PNCounter counter1 = new PNCounter(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
-
-        // when
-        counter1.increment(3);
-        inCommands2.onNext(outCommands1.values().get(0));
-        counter2.increment(5);
-
-        // then
-        outCommands2.assertNotComplete();
-        outCommands2.assertNoErrors();
-        assertThat(outCommands2.values(), contains(
-                new UpdateCommandMatcher(
-                        CRDT_ID,
-                        HashMap.ofEntries(
-                                Tuple.of(NODE_ID_1, 3L),
-                                Tuple.of(NODE_ID_2, 5L)
-                        ),
-                        HashMap.empty()
-                )
-        ));
-
-        // when
-        counter1.decrement(7);
-        inCommands2.onNext(outCommands1.values().get(1));
-        counter2.decrement(11);
-
-        // then
-        outCommands2.assertNotComplete();
-        outCommands2.assertNoErrors();
-        assertThat(outCommands2.values(), contains(
-                new UpdateCommandMatcher(
-                        CRDT_ID,
-                        HashMap.ofEntries(
-                                Tuple.of(NODE_ID_1, 3L),
-                                Tuple.of(NODE_ID_2, 5L)
-                        ),
-                        HashMap.empty()
-                ),
-                new UpdateCommandMatcher(
-                        CRDT_ID,
-                        HashMap.ofEntries(
-                                Tuple.of(NODE_ID_1, 3L),
-                                Tuple.of(NODE_ID_2, 5L)
-                        ),
-                        HashMap.ofEntries(
-                                Tuple.of(NODE_ID_1, 7L),
-                                Tuple.of(NODE_ID_2, 11L)
-                        )
-                )
-        ));
     }
 
 

@@ -1,7 +1,6 @@
 package com.netopyr.wurmloch.crdt;
 
-import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
+import io.reactivex.processors.BehaviorProcessor;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -15,62 +14,84 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.BiFunction;
 
-public class GSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T> */ {
+@SuppressWarnings("WeakerAccess")
+public class GSet<E> extends AbstractSet<E> implements Crdt<GSet<E>, GSet.AddCommand<E>> {
 
-    private final String id;
-    private final Set<T> elements = new HashSet<>();
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
-
-
-    public GSet(String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        this.id = Objects.requireNonNull(id, "Id must not be null");
-        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
-        commands.subscribe(outCommands);
-    }
+    // fields
+    private final String crdtId;
+    private final Set<E> elements = new HashSet<>();
+    private final Processor<AddCommand<E>, AddCommand<E>> commands = BehaviorProcessor.create();
 
 
-    @Override
-    public String getId() {
-        return id;
+    // constructor
+    public GSet(String crdtId) {
+        this.crdtId = Objects.requireNonNull(crdtId, "Id must not be null");
     }
 
     @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
-        return (nodeId, id, inCommands, outCommands) -> new GSet<>(id, inCommands, outCommands);
+    public BiFunction<String, String, GSet<E>> getFactory() {
+        return (nodeId, crdtId) -> new GSet<>(crdtId);
     }
 
+
+    // crdt
+    @Override
+    public String getCrdtId() {
+        return crdtId;
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super AddCommand<E>> subscriber) {
+        commands.subscribe(subscriber);
+    }
+
+    @Override
+    public void subscribeTo(Publisher<? extends AddCommand<E>> publisher) {
+        publisher.subscribe(new CrdtSubscriber<>(commands, this::processCommand));
+    }
+
+    @Override
+    public void connect(GSet<E> other) {
+        if (! Objects.equals(crdtId, other.getCrdtId())) {
+            throw new IllegalArgumentException("Ids do not match");
+        }
+        subscribeTo(other);
+        other.subscribeTo(this);
+    }
+
+    private boolean processCommand(AddCommand<E> command) {
+        return doAdd(command.getElement());
+    }
+
+
+    // core functionality
     @Override
     public int size() {
         return elements.size();
     }
 
     @Override
-    public Iterator<T> iterator() {
+    public Iterator<E> iterator() {
         return new GSetIterator();
     }
 
     @Override
-    public boolean add(T element) {
-        commands.onNext(new AddCommand<>(id, element));
+    public boolean add(E element) {
+        commands.onNext(new AddCommand<>(crdtId, element));
         return doAdd(element);
     }
 
-    private synchronized boolean doAdd(T element) {
+
+    // implementation
+    private synchronized boolean doAdd(E element) {
         return elements.add(element);
     }
 
-    @SuppressWarnings("unchecked")
-    private void processCommand(CrdtCommand command) {
-        final Class<? extends CrdtCommand> clazz = command.getClass();
-        if (AddCommand.class.equals(clazz)) {
-            doAdd(((AddCommand<T>)command).getElement());
-        }
-    }
+    private class GSetIterator implements Iterator<E> {
 
-    private class GSetIterator implements Iterator<T> {
-
-        final Iterator<T> it = elements.iterator();
+        final Iterator<E> it = elements.iterator();
 
         @Override
         public boolean hasNext() {
@@ -78,13 +99,14 @@ public class GSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T>
         }
 
         @Override
-        public T next() {
+        public E next() {
             return it.next();
         }
     }
 
 
-    static final class AddCommand<T> extends CrdtCommand {
+    // commands
+    public static final class AddCommand<T> extends CrdtCommand {
 
         private final T element;
 

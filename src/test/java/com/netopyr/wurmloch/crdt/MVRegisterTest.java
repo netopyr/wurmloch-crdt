@@ -5,8 +5,6 @@ import io.reactivex.subscribers.TestSubscriber;
 import javaslang.collection.Array;
 import org.hamcrest.CustomMatcher;
 import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
 
 import java.util.Objects;
@@ -16,7 +14,6 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.emptyIterable;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.mock;
 
 public class MVRegisterTest {
 
@@ -25,58 +22,51 @@ public class MVRegisterTest {
     private static final String NODE_ID_3 = "N_3";
     private static final String CRDT_ID = "ID_1";
 
-    @SuppressWarnings("unchecked")
     @Test(expectedExceptions = NullPointerException.class)
     public void constructorWithNullReplicaShouldThrow() {
-        new MVRegister<>(null, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        new MVRegister<>(null, CRDT_ID);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
     public void constructorWithNullIdShouldThrow() {
-        new MVRegister<String>(NODE_ID_1, null, mock(Publisher.class), mock(Subscriber.class));
+        new MVRegister<String>(NODE_ID_1, null);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
-    public void constructorWithNullPublisherShouldThrow() {
-        new MVRegister<String>(NODE_ID_1, CRDT_ID, null, mock(Subscriber.class));
+    public void subscribingToNullPublisherShouldThrow() {
+        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        register.subscribeTo(null);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test (expectedExceptions = NullPointerException.class)
-    public void constructorWithNullSubscriberShouldThrow() {
-        new MVRegister<String>(NODE_ID_1, CRDT_ID, mock(Publisher.class), null);
+    public void subscribingNullSubscriberShouldThrow() {
+        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        register.subscribe(null);
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test
     public void itShouldInitializeWithWaitingInCommands() {
         // given
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
+        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID);
         register1.set("Hello World");
-
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        inCommands2.onNext(outCommands1.values().get(0));
+        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
 
         // when
-        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID, inCommands2, mock(Subscriber.class));
+        register1.connect(register2);
 
         // then
         assertThat(register2.get(), contains("Hello World"));
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test
     public void itShouldGetAndSetValues() {
         // given
-        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), mock(Subscriber.class));
+        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID);
 
         // when
         final Array<String> v0 = register.get();
@@ -105,7 +95,8 @@ public class MVRegisterTest {
     public void itShouldSendCommandsOnUpdates() {
         // given
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), subscriber);
+        final MVRegister<String> register = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        register.subscribe(subscriber);
 
         // when
         register.set("Hello World");
@@ -143,53 +134,44 @@ public class MVRegisterTest {
     @Test
     public void itShouldAcceptNewerValueFromReceivedCommands() {
         // given
-        final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
+        register1.connect(register2);
 
         // when
         register1.set("Hello World");
-        inCommands2.onNext(outCommands1.values().get(0));
 
         // then
         assertThat(register2.get(), contains("Hello World"));
-        outCommands2.assertNoValues();
-        outCommands2.assertNotComplete();
-        outCommands2.assertNoErrors();
 
         // when
         register2.set("Goodbye World");
-        inCommands1.onNext(outCommands2.values().get(0));
 
         // then
         assertThat(register1.get(), contains("Goodbye World"));
-        assertThat(outCommands1.valueCount(), is(1));
-        outCommands1.assertNotComplete();
-        outCommands1.assertNoErrors();
     }
 
 
-    @SuppressWarnings("unchecked")
     @Test
     public void itShouldIgnoreOlderValueFromReceivedCommands() {
         // given
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands3 = ReplayProcessor.create();
-        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID, mock(Publisher.class), outCommands1);
-        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
-        final MVRegister<String> register3 = new MVRegister<>(NODE_ID_3, CRDT_ID, inCommands3, mock(Subscriber.class));
+        final TestSubscriber<MVRegister.SetCommand<String>> outCommands1 = TestSubscriber.create();
+        final TestSubscriber<MVRegister.SetCommand<String>> outCommands2 = TestSubscriber.create();
+        final Processor<MVRegister.SetCommand<String>, MVRegister.SetCommand<String>> inCommands3 = ReplayProcessor.create();
+        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        register1.subscribe(outCommands1);
+        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
+        register2.subscribe(outCommands2);
+        register1.connect(register2);
+        final MVRegister<String> register3 = new MVRegister<>(NODE_ID_3, CRDT_ID);
+        register3.subscribeTo(inCommands3);
+
 
         // when
         register1.set("Hello World");
-        final CrdtCommand oldCommand = outCommands1.values().get(0);
-        inCommands2.onNext(oldCommand);
         register2.set("Goodbye World");
-        final CrdtCommand newCommand = outCommands2.values().get(0);
+        final MVRegister.SetCommand<String> oldCommand = outCommands1.values().get(0);
+        final MVRegister.SetCommand<String> newCommand = outCommands2.values().get(1);
         inCommands3.onNext(newCommand);
         inCommands3.onNext(oldCommand);
 
@@ -201,18 +183,13 @@ public class MVRegisterTest {
     @Test
     public void itShouldAddOtherValueIfCommandsAreConcurrent() {
         // given
-        final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
 
         // when
         register1.set("Hello World");
         register2.set("Goodbye World");
-        inCommands1.onNext(outCommands2.values().get(0));
-        inCommands2.onNext(outCommands1.values().get(0));
+        register1.connect(register2);
 
         // then
         assertThat(register1.get(), containsInAnyOrder("Hello World", "Goodbye World"));
@@ -223,27 +200,15 @@ public class MVRegisterTest {
     @Test
     public void itShouldOverwriteConcurrentValues() {
         // given
-        final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
 
         register1.set("Hello World");
         register2.set("Goodbye World");
-        inCommands1.onNext(outCommands2.values().get(0));
-        inCommands2.onNext(outCommands1.values().get(0));
+        register1.connect(register2);
 
         // when
         register1.set("42");
-
-        // then
-        assertThat(register1.get(), containsInAnyOrder("42"));
-        assertThat(register2.get(), containsInAnyOrder("Hello World", "Goodbye World"));
-
-        // when
-        inCommands2.onNext(outCommands1.values().get(1));
 
         // then
         assertThat(register1.get(), containsInAnyOrder("42"));
@@ -254,12 +219,12 @@ public class MVRegisterTest {
     @Test
     public void itShouldOverwriteOnlyPartialCommandsFromReceivedCommand() {
         // given
-        final Processor<CrdtCommand, CrdtCommand> inCommands1 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands1 = TestSubscriber.create();
-        final Processor<CrdtCommand, CrdtCommand> inCommands2 = ReplayProcessor.create();
-        final TestSubscriber<CrdtCommand> outCommands2 = TestSubscriber.create();
-        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID, inCommands1, outCommands1);
-        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID, inCommands2, outCommands2);
+        final TestSubscriber<MVRegister.SetCommand<String>> outCommands1 = TestSubscriber.create();
+        final Processor<MVRegister.SetCommand<String>, MVRegister.SetCommand<String>> inCommands2 = ReplayProcessor.create();
+        final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID);
+        register1.subscribe(outCommands1);
+        final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
+        register2.subscribeTo(inCommands2);
 
         register1.set("Hello World");
         register2.set("Goodbye World");
@@ -267,12 +232,6 @@ public class MVRegisterTest {
 
         // when
         register1.set("42");
-
-        // then
-        assertThat(register1.get(), containsInAnyOrder("42"));
-        assertThat(register2.get(), containsInAnyOrder("Hello World", "Goodbye World"));
-
-        // when
         inCommands2.onNext(outCommands1.values().get(1));
 
         // then

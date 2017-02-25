@@ -4,8 +4,6 @@ import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.TestSubscriber;
 import org.hamcrest.CustomMatcher;
 import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
@@ -17,17 +15,15 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.mock;
 
 public class GSetTest {
 
     // Set functionality
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldAddElements() {
         // given:
-        final GSet<String> set = new GSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final GSet<String> set = new GSet<>("ID_1");
 
         // when:
         final boolean result1 = set.add("1");
@@ -48,11 +44,10 @@ public class GSetTest {
         assertThat(result3, is(false));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldReturnSize() {
         // given:
-        final GSet<String> set = new GSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final GSet<String> set = new GSet<>("ID_1");
 
         // then:
         assertThat(set.size(), is(0));
@@ -72,11 +67,10 @@ public class GSetTest {
         assertThat(set.size(), is(3));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldIterate() {
         // given:
-        final GSet<String> set = new GSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final GSet<String> set = new GSet<>("ID_1");
 
         // then:
         assertThat(set.iterator().hasNext(), is(false));
@@ -104,13 +98,12 @@ public class GSetTest {
         assertThat(results, contains("1", "2", "3"));
     }
 
-    @SuppressWarnings("unchecked")
     @Test (expectedExceptions = UnsupportedOperationException.class)
     public void shouldRemoveElements() {
         // given:
         final Set<String> expected = new HashSet<>();
         expected.addAll(Arrays.asList("1", "2", "3"));
-        final GSet<String> set = new GSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final GSet<String> set = new GSet<>("ID_1");
         set.addAll(expected);
         final Iterator<String> it = set.iterator();
 
@@ -119,6 +112,7 @@ public class GSetTest {
         it.remove();
     }
 
+
     // CRDT functionality
 
     @SuppressWarnings("unchecked")
@@ -126,7 +120,8 @@ public class GSetTest {
     public void shouldSendNotificationForAdds() {
         // given:
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final GSet<String> set = new GSet<>("ID_1", mock(Publisher.class), subscriber);
+        final GSet<String> set = new GSet<>("ID_1");
+        set.subscribe(subscriber);
 
         // when:
         set.add("1");
@@ -137,23 +132,24 @@ public class GSetTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new AddCommandMatcher<>(set.getId(), "1"),
-                new AddCommandMatcher<>(set.getId(), "2"),
-                new AddCommandMatcher<>(set.getId(), "1")
+                new AddCommandMatcher<>(set.getCrdtId(), "1"),
+                new AddCommandMatcher<>(set.getCrdtId(), "2"),
+                new AddCommandMatcher<>(set.getCrdtId(), "1")
         ));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldHandleAddCommands() {
         // given:
-        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final Processor<GSet.AddCommand<String>, GSet.AddCommand<String>> inputStream = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final GSet<String> set = new GSet<>("ID_1", inputStream, subscriber);
+        final GSet<String> set = new GSet<>("ID_1");
+        set.subscribeTo(inputStream);
+        set.subscribe(subscriber);
 
-        final GSet.AddCommand<String> command1 = new GSet.AddCommand<>(set.getId(), "1");
-        final GSet.AddCommand<String> command2 = new GSet.AddCommand<>(set.getId(), "2");
-        final GSet.AddCommand<String> command3 = new GSet.AddCommand<>(set.getId(), "1");
+        final GSet.AddCommand<String> command1 = new GSet.AddCommand<>(set.getCrdtId(), "1");
+        final GSet.AddCommand<String> command2 = new GSet.AddCommand<>(set.getCrdtId(), "2");
+        final GSet.AddCommand<String> command3 = new GSet.AddCommand<>(set.getCrdtId(), "1");
 
         // when:
         inputStream.onNext(command1);
@@ -162,19 +158,21 @@ public class GSetTest {
 
         // then:
         assertThat(set, hasSize(2));
+        assertThat(subscriber.valueCount(), is(2));
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
-        subscriber.assertNoValues();
     }
 
     @Test
     public void shouldHandleDuplicateCommands() {
         // given:
-        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final Processor<GSet.AddCommand<String>, GSet.AddCommand<String>> inputStream = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final GSet<String> set = new GSet<>("ID_1", inputStream, subscriber);
+        final GSet<String> set = new GSet<>("ID_1");
+        set.subscribeTo(inputStream);
+        set.subscribe(subscriber);
 
-        final GSet.AddCommand<String> command = new GSet.AddCommand<>(set.getId(), "1");
+        final GSet.AddCommand<String> command = new GSet.AddCommand<>(set.getCrdtId(), "1");
 
         // when:
         inputStream.onNext(command);
@@ -182,10 +180,11 @@ public class GSetTest {
 
         // then:
         assertThat(set, hasSize(1));
+        assertThat(subscriber.valueCount(), is(1));
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
-        subscriber.assertNoValues();
     }
+
 
     // Observable functionality
 

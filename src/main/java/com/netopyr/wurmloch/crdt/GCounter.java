@@ -1,53 +1,44 @@
 package com.netopyr.wurmloch.crdt;
 
-import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
+import io.reactivex.processors.BehaviorProcessor;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
+import java.util.function.BiFunction;
 
-public class GCounter implements Crdt {
+@SuppressWarnings("WeakerAccess")
+public class GCounter extends AbstractCrdt<GCounter, GCounter.UpdateCommand> {
 
-    private final String nodeId;
-    private final String id;
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
-
+    // fields
     private Map<String, Long> entries = HashMap.empty();
 
-    public GCounter(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
-        this.id = Objects.requireNonNull(id, "Id must not be null");
-        inCommands = Objects.requireNonNull(inCommands, "InCommands must not be null");
-        outCommands = Objects.requireNonNull(outCommands, "OutCommands must not be null");
-        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
-        commands.subscribe(outCommands);
+
+    // constructor
+    public GCounter(String nodeId, String crdtId) {
+        super(nodeId, crdtId, BehaviorProcessor.create());
     }
 
     @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+    public BiFunction<String, String, GCounter> getFactory() {
         return GCounter::new;
     }
 
+
+    // crdt
     @Override
-    public String getId() {
-        return id;
+    protected boolean processCommand(UpdateCommand command) {
+        final Map<String, Long> oldEntries = entries;
+        entries = entries.merge(command.entries, Math::max);
+        return ! entries.equals(oldEntries);
     }
 
-    private void processCommand(CrdtCommand command) {
-        if (UpdateCommand.class.equals(command.getClass())) {
-            final UpdateCommand updateCommand = (UpdateCommand) command;
-            entries = entries.merge(updateCommand.entries, Math::max);
-        }
-    }
 
+    // core functionality
     public long get() {
         return entries.values().sum().longValue();
     }
@@ -62,12 +53,14 @@ public class GCounter implements Crdt {
         }
         entries = entries.put(nodeId, entries.get(nodeId).getOrElse(0L) + value);
         commands.onNext(new UpdateCommand(
-                id,
+                crdtId,
                 entries
         ));
     }
 
-    static final class UpdateCommand extends CrdtCommand {
+
+    // commands
+    public static final class UpdateCommand extends CrdtCommand {
 
         private final Map<String, Long> entries;
 

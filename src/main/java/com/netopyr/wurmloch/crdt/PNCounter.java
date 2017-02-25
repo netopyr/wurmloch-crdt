@@ -1,55 +1,46 @@
 package com.netopyr.wurmloch.crdt;
 
-import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
+import io.reactivex.processors.BehaviorProcessor;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
+import java.util.function.BiFunction;
 
-public class PNCounter implements Crdt {
+@SuppressWarnings("WeakerAccess")
+public class PNCounter extends AbstractCrdt<PNCounter, PNCounter.UpdateCommand> {
 
-    private final String nodeId;
-    private final String id;
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
-
+    // fields
     private Map<String, Long> pEntries = HashMap.empty();
     private Map<String, Long> nEntries = HashMap.empty();
 
-    public PNCounter(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
-        this.id = Objects.requireNonNull(id, "Id must not be null");
-        inCommands = Objects.requireNonNull(inCommands, "InCommands must not be null");
-        outCommands = Objects.requireNonNull(outCommands, "OutCommands must not be null");
-        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
-        commands.subscribe(outCommands);
+
+    // constructor
+    public PNCounter(String nodeId, String crtdId) {
+        super(nodeId, crtdId, BehaviorProcessor.create());
     }
 
     @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+    public BiFunction<String, String, PNCounter> getFactory() {
         return PNCounter::new;
     }
 
-    @Override
-    public String getId() {
-        return id;
+
+    // crdt
+    protected boolean processCommand(PNCounter.UpdateCommand command) {
+        final Map<String, Long> oldPEntries = pEntries;
+        final Map<String, Long> oldNEntries = nEntries;
+        pEntries = pEntries.merge(command.pEntries, Math::max);
+        nEntries = nEntries.merge(command.nEntries, Math::max);
+        return ! (pEntries.equals(oldPEntries) && nEntries.equals(oldNEntries));
     }
 
-    private void processCommand(CrdtCommand command) {
-        if (UpdateCommand.class.equals(command.getClass())) {
-            final UpdateCommand updateCommand = (UpdateCommand) command;
-            pEntries = pEntries.merge(updateCommand.pEntries, Math::max);
-            nEntries = nEntries.merge(updateCommand.nEntries, Math::max);
-        }
-    }
 
+    // core functionality
     public long get() {
         return pEntries.values().sum().longValue() - nEntries.values().sum().longValue();
     }
@@ -64,7 +55,7 @@ public class PNCounter implements Crdt {
         }
         pEntries = pEntries.put(nodeId, pEntries.get(nodeId).getOrElse(0L) + value);
         commands.onNext(new UpdateCommand(
-                id,
+                crdtId,
                 pEntries,
                 nEntries
         ));
@@ -80,13 +71,15 @@ public class PNCounter implements Crdt {
         }
         nEntries = nEntries.put(nodeId, nEntries.get(nodeId).getOrElse(0L) + value);
         commands.onNext(new UpdateCommand(
-                id,
+                crdtId,
                 pEntries,
                 nEntries
         ));
     }
 
-    static final class UpdateCommand extends CrdtCommand {
+
+    // commands
+    public static final class UpdateCommand extends CrdtCommand {
 
         private final Map<String, Long> pEntries;
         private final Map<String, Long> nEntries;

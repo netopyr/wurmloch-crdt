@@ -9,22 +9,21 @@ import com.netopyr.wurmloch.crdt.MVRegister;
 import com.netopyr.wurmloch.crdt.ORSet;
 import com.netopyr.wurmloch.crdt.PNCounter;
 import com.netopyr.wurmloch.crdt.RGA;
-import javaslang.Function4;
 import javaslang.control.Option;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.util.UUID;
+import java.util.function.BiFunction;
 
 public interface CrdtStore extends Publisher<CrdtCommand> {
 
     Option<? extends Crdt> findCrdt(String crdtId);
 
 
-    default <T extends Crdt> T createCrdt(Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, T> factory) {
+    default <T extends Crdt> T createCrdt(BiFunction<String, String, T> factory) {
         return createCrdt(factory, UUID.randomUUID().toString());
     }
-    <T extends Crdt> T createCrdt(Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, T> factory, String id);
+    <T extends Crdt> T createCrdt(BiFunction<String, String, T> factory, String id);
 
 
     default <T> LWWRegister<T> createLWWRegister() {

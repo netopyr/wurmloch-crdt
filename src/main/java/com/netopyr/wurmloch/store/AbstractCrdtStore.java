@@ -12,7 +12,6 @@ import com.netopyr.wurmloch.crdt.RGA;
 import io.reactivex.processors.PublishProcessor;
 import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.DisposableSubscriber;
-import javaslang.Function4;
 import javaslang.collection.HashMap;
 import javaslang.collection.HashSet;
 import javaslang.collection.Map;
@@ -22,11 +21,11 @@ import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.BiFunction;
 
 class AbstractCrdtStore implements CrdtStore {
 
@@ -41,21 +40,20 @@ class AbstractCrdtStore implements CrdtStore {
     private Map<String, Crdt> crdts = HashMap.empty();
 
 
-
     AbstractCrdtStore() {
         this(UUID.randomUUID().toString());
     }
+
     AbstractCrdtStore(String nodeId) {
         this.nodeId = nodeId;
         inCommandsEntry
-                .filter(command -> ! commands.contains(command))
+                .filter(command -> !commands.contains(command))
                 .doOnNext(command -> commands = commands.add(command))
                 .subscribe(inCommandsExit);
         outCommandsEntry
                 .doOnNext(command -> commands = commands.add(command))
                 .subscribe(outCommandsExit);
         inCommandsExit.subscribe(outCommandsEntry);
-//        distinctInCommands.subscribe(outCommands);
     }
 
 
@@ -66,10 +64,10 @@ class AbstractCrdtStore implements CrdtStore {
     }
 
     @Override
-    public <T extends Crdt> T createCrdt(Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, T> factory, String id) {
+    public <T extends Crdt> T createCrdt(BiFunction<String, String, T> factory, String id) {
         Objects.requireNonNull(factory, "factory must not be null");
         Objects.requireNonNull(id, "id must not be null");
-        final T result = factory.apply(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final T result = factory.apply(nodeId, id);
         register(result);
         return result;
     }
@@ -77,7 +75,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> LWWRegister<T> createLWWRegister(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final LWWRegister<T> result = new LWWRegister<>(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final LWWRegister<T> result = new LWWRegister<>(nodeId, id);
         register(result);
         return result;
     }
@@ -85,7 +83,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> MVRegister<T> createMVRegister(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final MVRegister<T> result = new MVRegister<>(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final MVRegister<T> result = new MVRegister<>(nodeId, id);
         register(result);
         return result;
     }
@@ -93,7 +91,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public GCounter createGCounter(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final GCounter result = new GCounter(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final GCounter result = new GCounter(nodeId, id);
         register(result);
         return result;
     }
@@ -101,7 +99,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public PNCounter createPNCounter(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final PNCounter result = new PNCounter(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final PNCounter result = new PNCounter(nodeId, id);
         register(result);
         return result;
     }
@@ -109,7 +107,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> GSet<T> createGSet(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final GSet<T> result = new GSet<>(id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final GSet<T> result = new GSet<>(id);
         register(result);
         return result;
     }
@@ -117,7 +115,7 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> ORSet<T> createORSet(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final ORSet<T> result = new ORSet<>(id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final ORSet<T> result = new ORSet<>(id);
         register(result);
         return result;
     }
@@ -125,13 +123,24 @@ class AbstractCrdtStore implements CrdtStore {
     @Override
     public <T> RGA<T> createRGA(String id) {
         Objects.requireNonNull(id, "id must not be null");
-        final RGA<T> result = new RGA<>(nodeId, id, inCommandsExit.filter(command -> Objects.equals(id, command.getCrdtId())), outCommandsEntry);
+        final RGA<T> result = new RGA<>(nodeId, id);
         register(result);
         return result;
     }
 
+    @SuppressWarnings("unchecked")
+    private void connect(Crdt crdt) {
+        crdt.subscribe(outCommandsEntry);
+        crdt.subscribeTo(
+                inCommandsExit
+                        .filter(command -> Objects.equals(crdt.getCrdtId(), command.getCrdtId()))
+                        .filter(command -> !(command instanceof AddCrdtCommand))
+        );
+    }
+
     private void register(Crdt crdt) {
-        crdts = crdts.put(crdt.getId(), crdt);
+        connect(crdt);
+        crdts = crdts.put(crdt.getCrdtId(), crdt);
         final AddCrdtCommand command = new AddCrdtCommand(crdt);
         outCommandsEntry.onNext(command);
     }
@@ -150,11 +159,10 @@ class AbstractCrdtStore implements CrdtStore {
                 if (findCrdt(crdtId).isEmpty()) {
                     final Crdt crdt = ((AddCrdtCommand) command).getFactory().apply(
                             nodeId,
-                            crdtId,
-                            inCommandsExit.filter(c -> Objects.equals(crdtId, c.getCrdtId())),
-                            outCommandsEntry
+                            crdtId
                     );
-                    crdts = crdts.put(crdt.getId(), crdt);
+                    connect(crdt);
+                    crdts = crdts.put(crdt.getCrdtId(), crdt);
                 }
             }
             inCommandsEntry.onNext(command);
@@ -175,15 +183,16 @@ class AbstractCrdtStore implements CrdtStore {
     static final class AddCrdtCommand extends CrdtCommand {
 
         private final Class<? extends Crdt> crdtClass;
-        private final Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> factory;
+        private final BiFunction<String, String, Crdt> factory;
 
+        @SuppressWarnings("unchecked")
         AddCrdtCommand(Crdt crdt) {
-            super(crdt.getId());
+            super(crdt.getCrdtId());
             this.crdtClass = crdt.getClass();
             this.factory = crdt.getFactory();
         }
 
-        Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+        BiFunction<String, String, Crdt> getFactory() {
             return factory;
         }
 

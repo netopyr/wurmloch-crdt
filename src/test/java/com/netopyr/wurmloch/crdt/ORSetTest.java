@@ -4,8 +4,6 @@ import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.TestSubscriber;
 import org.hamcrest.CustomMatcher;
 import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
 
 import java.util.Arrays;
@@ -21,17 +19,15 @@ import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.mockito.Mockito.mock;
 
 public class ORSetTest {
 
     // Set functionality
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldAddElements() {
         // given:
-        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final ORSet<String> set = new ORSet<>("ID_1");
 
         // when:
         final boolean result1 = set.add("1");
@@ -52,11 +48,10 @@ public class ORSetTest {
         assertThat(result3, is(false));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldReturnSize() {
         // given:
-        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final ORSet<String> set = new ORSet<>("ID_1");
 
         // then:
         assertThat(set.size(), is(0));
@@ -76,11 +71,10 @@ public class ORSetTest {
         assertThat(set.size(), is(3));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldIterate() {
         // given:
-        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final ORSet<String> set = new ORSet<>("ID_1");
 
         // then:
         assertThat(set.iterator().hasNext(), is(false));
@@ -108,13 +102,12 @@ public class ORSetTest {
         assertThat(results, contains("1", "2", "3"));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldRemoveElements() {
         // given:
         final Set<String> expected = new HashSet<>();
         expected.addAll(Arrays.asList("1", "2", "3"));
-        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), mock(Subscriber.class));
+        final ORSet<String> set = new ORSet<>("ID_1");
         set.addAll(expected);
         final Iterator<String> it = set.iterator();
 
@@ -149,7 +142,8 @@ public class ORSetTest {
     public void shouldSendNotificationForAdds() {
         // given:
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), subscriber);
+        final ORSet<String> set = new ORSet<>("ID_1");
+        set.subscribe(subscriber);
 
         // when:
         set.add("1");
@@ -160,9 +154,9 @@ public class ORSetTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new AddCommandMatcher<>(set.getId(), "1"),
-                new AddCommandMatcher<>(set.getId(), "2"),
-                new AddCommandMatcher<>(set.getId(), "1")
+                new AddCommandMatcher<>(set.getCrdtId(), "1"),
+                new AddCommandMatcher<>(set.getCrdtId(), "2"),
+                new AddCommandMatcher<>(set.getCrdtId(), "1")
         ));
     }
 
@@ -171,7 +165,8 @@ public class ORSetTest {
     public void shouldSendNotificationForRemoves() {
         // given:
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final ORSet<String> set = new ORSet<>("ID_1", mock(Publisher.class), subscriber);
+        final ORSet<String> set = new ORSet<>("ID_1");
+        set.subscribe(subscriber);
 
         set.add("1");
         set.add("1");
@@ -185,23 +180,24 @@ public class ORSetTest {
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
         assertThat(subscriber.values(), contains(
-                new AddCommandMatcher<>(set.getId(), "1"),
-                new AddCommandMatcher<>(set.getId(), "1"),
-                new RemoveCommandMatcher<>(set.getId(), "1", "1")
+                new AddCommandMatcher<>(set.getCrdtId(), "1"),
+                new AddCommandMatcher<>(set.getCrdtId(), "1"),
+                new RemoveCommandMatcher<>(set.getCrdtId(), "1", "1")
         ));
     }
 
-    @SuppressWarnings("unchecked")
     @Test
     public void shouldHandleAddCommands() {
         // given:
-        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final Processor<ORSet.ORSetCommand<String>, ORSet.ORSetCommand<String>> inputStream = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
+        final ORSet<String> set = new ORSet<>("ID_1");
+        set.subscribeTo(inputStream);
+        set.subscribe(subscriber);
 
-        final ORSet.AddCommand<String> command1 = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("1", UUID.randomUUID()));
-        final ORSet.AddCommand<String> command2 = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("2", UUID.randomUUID()));
-        final ORSet.AddCommand<String> command3 = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("1", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command1 = new ORSet.AddCommand<>(set.getCrdtId(), new ORSet.Element<>("1", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command2 = new ORSet.AddCommand<>(set.getCrdtId(), new ORSet.Element<>("2", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command3 = new ORSet.AddCommand<>(set.getCrdtId(), new ORSet.Element<>("1", UUID.randomUUID()));
 
         // when:
         inputStream.onNext(command1);
@@ -210,24 +206,26 @@ public class ORSetTest {
 
         // then:
         assertThat(set, hasSize(2));
+        assertThat(subscriber.valueCount(), is(3));
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
-        subscriber.assertNoValues();
     }
 
     @Test
     public void shouldHandleRemoveCommands() {
         // given:
-        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final Processor<ORSet.ORSetCommand<String>, ORSet.ORSetCommand<String>> inputStream = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
+        final ORSet<String> set = new ORSet<>("ID_1");
+        set.subscribeTo(inputStream);
+        set.subscribe(subscriber);
 
         final ORSet.Element<String> elem1 = new ORSet.Element<>("1", UUID.randomUUID());
         final ORSet.Element<String> elem2 = new ORSet.Element<>("1", UUID.randomUUID());
         final Set<ORSet.Element<String>> elements = new HashSet<>(Arrays.asList(elem1, elem2));
-        final ORSet.AddCommand<String> command1 = new ORSet.AddCommand<>(set.getId(), elem1);
-        final ORSet.AddCommand<String> command2 = new ORSet.AddCommand<>(set.getId(), elem2);
-        final ORSet.RemoveCommand<String> command3 = new ORSet.RemoveCommand<>(set.getId(), elements);
+        final ORSet.AddCommand<String> command1 = new ORSet.AddCommand<>(set.getCrdtId(), elem1);
+        final ORSet.AddCommand<String> command2 = new ORSet.AddCommand<>(set.getCrdtId(), elem2);
+        final ORSet.RemoveCommand<String> command3 = new ORSet.RemoveCommand<>(set.getCrdtId(), elements);
 
         // when:
         inputStream.onNext(command1);
@@ -236,19 +234,21 @@ public class ORSetTest {
 
         // then:
         assertThat(set, empty());
+        assertThat(subscriber.valueCount(), is(3));
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
-        subscriber.assertNoValues();
     }
 
     @Test
     public void shouldHandleDuplicateCommands() {
         // given:
-        final Processor<CrdtCommand, CrdtCommand> inputStream = ReplayProcessor.create();
+        final Processor<ORSet.ORSetCommand<String>, ORSet.ORSetCommand<String>> inputStream = ReplayProcessor.create();
         final TestSubscriber<CrdtCommand> subscriber = TestSubscriber.create();
-        final ORSet<String> set = new ORSet<>("ID_1", inputStream, subscriber);
+        final ORSet<String> set = new ORSet<>("ID_1");
+        set.subscribeTo(inputStream);
+        set.subscribe(subscriber);
 
-        final ORSet.AddCommand<String> command = new ORSet.AddCommand<>(set.getId(), new ORSet.Element<>("1", UUID.randomUUID()));
+        final ORSet.AddCommand<String> command = new ORSet.AddCommand<>(set.getCrdtId(), new ORSet.Element<>("1", UUID.randomUUID()));
 
         // when:
         inputStream.onNext(command);
@@ -256,9 +256,9 @@ public class ORSetTest {
 
         // then:
         assertThat(set, hasSize(1));
+        assertThat(subscriber.valueCount(), is(1));
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
-        subscriber.assertNoValues();
     }
 
     @Test
@@ -268,13 +268,13 @@ public class ORSetTest {
 
     // Observable functionality
 
-    public static class RemoveCommandMatcher<T> extends CustomMatcher<CrdtCommand> {
+    private static class RemoveCommandMatcher<T> extends CustomMatcher<CrdtCommand> {
 
         private final String crdtId;
         private final List<T> values;
 
         @SafeVarargs
-        public RemoveCommandMatcher(String crdtId, T... values) {
+        private RemoveCommandMatcher(String crdtId, T... values) {
             super(String.format("RemoveCommandMatcher[crdtId=%s,values=%s]", crdtId, Arrays.toString(values)));
             this.crdtId = crdtId;
             this.values = Arrays.asList(values);

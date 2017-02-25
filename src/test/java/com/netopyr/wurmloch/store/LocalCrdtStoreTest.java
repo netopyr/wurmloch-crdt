@@ -4,8 +4,6 @@ import com.netopyr.wurmloch.crdt.Crdt;
 import com.netopyr.wurmloch.crdt.CrdtCommand;
 import io.reactivex.subscribers.TestSubscriber;
 import javaslang.control.Option;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -17,8 +15,9 @@ public class LocalCrdtStoreTest {
     private static final String NODE_ID_2 = "N_2";
     
 
-    private static SimpleCrdt createCrdt(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        return new SimpleCrdt(id, outCommands);
+    @SuppressWarnings("unused")
+    private static SimpleCrdt createCrdt(String nodeId, String id) {
+        return new SimpleCrdt(id);
     }
 
 
@@ -117,20 +116,20 @@ public class LocalCrdtStoreTest {
         final SimpleCrdt crdt2 = store2.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_2);
 
         // when:
-        final CrdtCommand command1_1 = new CrdtCommand(crdt1.getId()) {};
+        final CrdtCommand command1_1 = new CrdtCommand(crdt1.getCrdtId()) {};
         crdt1.sendCommands(command1_1);
 
-        final CrdtCommand command2_1 = new CrdtCommand(crdt2.getId()) {};
+        final CrdtCommand command2_1 = new CrdtCommand(crdt2.getCrdtId()) {};
         crdt2.sendCommands(command2_1);
 
-        final CrdtCommand command3_1 = new CrdtCommand(crdt1.getId()) {};
-        final CrdtCommand command3_2 = new CrdtCommand(crdt1.getId()) {};
-        final CrdtCommand command3_3 = new CrdtCommand(crdt1.getId()) {};
+        final CrdtCommand command3_1 = new CrdtCommand(crdt1.getCrdtId()) {};
+        final CrdtCommand command3_2 = new CrdtCommand(crdt1.getCrdtId()) {};
+        final CrdtCommand command3_3 = new CrdtCommand(crdt1.getCrdtId()) {};
         crdt1.sendCommands(command3_1, command3_2, command3_3);
 
-        final CrdtCommand command4_1 = new CrdtCommand(crdt2.getId()) {};
-        final CrdtCommand command4_2 = new CrdtCommand(crdt2.getId()) {};
-        final CrdtCommand command4_3 = new CrdtCommand(crdt2.getId()) {};
+        final CrdtCommand command4_1 = new CrdtCommand(crdt2.getCrdtId()) {};
+        final CrdtCommand command4_2 = new CrdtCommand(crdt2.getCrdtId()) {};
+        final CrdtCommand command4_3 = new CrdtCommand(crdt2.getCrdtId()) {};
         crdt2.sendCommands(command4_1, command4_2, command4_3);
 
         // then:
@@ -181,20 +180,20 @@ public class LocalCrdtStoreTest {
         final SimpleCrdt crdt1 = store1.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_1);
         final SimpleCrdt crdt2 = store2.createCrdt(LocalCrdtStoreTest::createCrdt, NODE_ID_2);
 
-        final CrdtCommand command1_1 = new CrdtCommand(crdt1.getId()) {};
+        final CrdtCommand command1_1 = new CrdtCommand(crdt1.getCrdtId()) {};
         crdt1.sendCommands(command1_1);
 
-        final CrdtCommand command2_1 = new CrdtCommand(crdt2.getId()) {};
+        final CrdtCommand command2_1 = new CrdtCommand(crdt2.getCrdtId()) {};
         crdt2.sendCommands(command2_1);
 
-        final CrdtCommand command3_1 = new CrdtCommand(crdt1.getId()) {};
-        final CrdtCommand command3_2 = new CrdtCommand(crdt1.getId()) {};
-        final CrdtCommand command3_3 = new CrdtCommand(crdt1.getId()) {};
+        final CrdtCommand command3_1 = new CrdtCommand(crdt1.getCrdtId()) {};
+        final CrdtCommand command3_2 = new CrdtCommand(crdt1.getCrdtId()) {};
+        final CrdtCommand command3_3 = new CrdtCommand(crdt1.getCrdtId()) {};
         crdt1.sendCommands(command3_1, command3_2, command3_3);
 
-        final CrdtCommand command4_1 = new CrdtCommand(crdt2.getId()) {};
-        final CrdtCommand command4_2 = new CrdtCommand(crdt2.getId()) {};
-        final CrdtCommand command4_3 = new CrdtCommand(crdt2.getId()) {};
+        final CrdtCommand command4_1 = new CrdtCommand(crdt2.getCrdtId()) {};
+        final CrdtCommand command4_2 = new CrdtCommand(crdt2.getCrdtId()) {};
+        final CrdtCommand command4_3 = new CrdtCommand(crdt2.getCrdtId()) {};
         crdt2.sendCommands(command4_1, command4_2, command4_3);
 
         // when:

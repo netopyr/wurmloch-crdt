@@ -1,13 +1,17 @@
 package com.netopyr.wurmloch.crdt;
 
-import javaslang.Function4;
 import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
-public interface Crdt {
+import java.util.function.BiFunction;
 
-    String getId();
+public interface Crdt<TYPE extends Crdt<TYPE, COMMAND>, COMMAND extends CrdtCommand> extends Publisher<COMMAND> {
 
-    Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory();
+    String getCrdtId();
+
+    void subscribeTo(Publisher<? extends COMMAND> publisher);
+
+    void connect(TYPE other);
+
+    BiFunction<String, String, TYPE> getFactory();
 
 }

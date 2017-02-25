@@ -1,7 +1,6 @@
 package com.netopyr.wurmloch.crdt;
 
 import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -17,100 +16,121 @@ import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
-public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T> */ {
+public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORSetCommand<E>> /*, ObservableSet<E> */ {
 
-    private final String id;
-    private final Set<Element<T>> elements = new HashSet<>();
-    private final Set<Element<T>> tombstone = new HashSet<>();
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
-
-
-    public ORSet(String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        this.id = Objects.requireNonNull(id, "Id must not be null");
-        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
-        commands.subscribe(outCommands);
-    }
+    // fields
+    private final String crdtId;
+    private final Set<Element<E>> elements = new HashSet<>();
+    private final Set<Element<E>> tombstone = new HashSet<>();
+    private final Processor<ORSetCommand<E>, ORSetCommand<E>> commands = PublishProcessor.create();
 
 
-    @Override
-    public String getId() {
-        return id;
+    // constructor
+    public ORSet(String crdtId) {
+        this.crdtId = Objects.requireNonNull(crdtId, "Id must not be null");
     }
 
     @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
-        return (nodeId, id, inCommands, outCommands) -> new ORSet<T>(id, inCommands, outCommands);
+    public BiFunction<String, String, ORSet<E>> getFactory() {
+        return (nodeId, crdtId) -> new ORSet<>(crdtId);
     }
 
+
+    // crdt
+    @Override
+    public String getCrdtId() {
+        return crdtId;
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super ORSetCommand<E>> subscriber) {
+        commands.subscribe(subscriber);
+    }
+
+    @Override
+    public void subscribeTo(Publisher<? extends ORSetCommand<E>> publisher) {
+        publisher.subscribe(new CrdtSubscriber<>(commands, this::processCommand));
+    }
+
+    @Override
+    public void connect(ORSet<E> other) {
+        if (! Objects.equals(crdtId, other.getCrdtId())) {
+            throw new IllegalArgumentException("Ids do not match");
+        }
+        subscribeTo(other);
+        other.subscribeTo(this);
+    }
+
+    private boolean processCommand(ORSetCommand<E> command) {
+        if (command instanceof AddCommand) {
+            return doAdd(((AddCommand<E>)command).getElement());
+        } else if (command instanceof RemoveCommand) {
+            return doRemove(((RemoveCommand<E>)command).getElements());
+        }
+        return false;
+    }
+
+
+    // core functionality
     @Override
     public int size() {
         return doElements().size();
     }
 
     @Override
-    public Iterator<T> iterator() {
+    public Iterator<E> iterator() {
         return new ORSetIterator();
     }
 
     @Override
-    public boolean add(T value) {
+    public boolean add(E value) {
         final boolean contained = doContains(value);
         prepareAdd(value);
         return ! contained;
     }
 
 
+    // implementation
     private static <U> Predicate<Element<U>> matches(U value) {
         return element -> Objects.equals(value, element.getValue());
     }
 
-    private synchronized boolean doContains(T value) {
+    private synchronized boolean doContains(E value) {
         return elements.parallelStream().anyMatch(matches(value));
     }
 
-    private synchronized Set<T> doElements() {
+    private synchronized Set<E> doElements() {
         return elements.parallelStream().map(Element::getValue).collect(Collectors.toSet());
     }
 
-    private synchronized void prepareAdd(T value) {
-        final Element<T> element = new Element<>(value, UUID.randomUUID());
-        commands.onNext(new AddCommand<>(getId(), element));
+    private synchronized void prepareAdd(E value) {
+        final Element<E> element = new Element<>(value, UUID.randomUUID());
+        commands.onNext(new AddCommand<>(getCrdtId(), element));
         doAdd(element);
     }
 
-    private synchronized void doAdd(Element<T> element) {
-        elements.add(element);
-        elements.removeAll(tombstone);
+    private synchronized boolean doAdd(Element<E> element) {
+        return elements.add(element) || elements.removeAll(tombstone);
     }
 
-    private synchronized void prepareRemove(T value) {
-        final Set<Element<T>> removes = elements.parallelStream().filter(matches(value)).collect(Collectors.toSet());
-        commands.onNext(new RemoveCommand<>(getId(), removes));
+    private synchronized void prepareRemove(E value) {
+        final Set<Element<E>> removes = elements.parallelStream().filter(matches(value)).collect(Collectors.toSet());
+        commands.onNext(new RemoveCommand<>(getCrdtId(), removes));
         doRemove(removes);
     }
 
-    private synchronized void doRemove(Collection<Element<T>> removes) {
-        elements.removeAll(removes);
-        tombstone.addAll(removes);
+    private synchronized boolean doRemove(Collection<Element<E>> removes) {
+        return elements.removeAll(removes) || tombstone.addAll(removes);
     }
 
-    @SuppressWarnings("unchecked")
-    private void processCommand(CrdtCommand command) {
-        final Class<? extends CrdtCommand> clazz = command.getClass();
-        if (AddCommand.class.equals(clazz)) {
-            doAdd(((AddCommand)command).getElement());
-        } else if (RemoveCommand.class.equals(clazz)) {
-            doRemove(((RemoveCommand)command).getElements());
-        }
-    }
+    private class ORSetIterator implements Iterator<E> {
 
-    private class ORSetIterator implements Iterator<T> {
-
-        final Iterator<T> it = doElements().iterator();
-        T lastElement = null;
+        final Iterator<E> it = doElements().iterator();
+        E lastElement = null;
 
         @Override
         public boolean hasNext() {
@@ -118,7 +138,7 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
         }
 
         @Override
-        public T next() {
+        public E next() {
             lastElement = it.next();
             return lastElement;
         }
@@ -131,17 +151,17 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
     }
 
 
-    static final class Element<T> {
+    public static final class Element<E> {
 
-        private final T value;
+        private final E value;
         private final UUID uuid;
 
-        Element(T value, UUID uuid) {
+        Element(E value, UUID uuid) {
             this.value = value;
             this.uuid = uuid;
         }
 
-        T getValue() {
+        E getValue() {
             return value;
         }
 
@@ -177,16 +197,24 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
     }
 
 
-    static final class AddCommand<T> extends CrdtCommand {
+    // commands
+    @SuppressWarnings({"WeakerAccess", "unused"})
+    public abstract static class ORSetCommand<E> extends CrdtCommand {
+        protected ORSetCommand(String crdtId) {
+            super(crdtId);
+        }
+    }
 
-        private final Element<T> element;
+    public static final class AddCommand<E> extends ORSetCommand<E> {
 
-        AddCommand(String crdtId, Element<T> element) {
+        private final Element<E> element;
+
+        AddCommand(String crdtId, Element<E> element) {
             super(crdtId);
             this.element = element;
         }
 
-        Element<T> getElement() {
+        Element<E> getElement() {
             return element;
         }
 
@@ -223,16 +251,16 @@ public class ORSet<T> extends AbstractSet<T> implements Crdt /*, ObservableSet<T
     }
 
 
-    static final class RemoveCommand<T> extends CrdtCommand {
+    public static final class RemoveCommand<E> extends ORSetCommand<E> {
 
-        private final Set<Element<T>> elements;
+        private final Set<Element<E>> elements;
 
-        RemoveCommand(String crdt, Set<Element<T>> elements) {
+        RemoveCommand(String crdt, Set<Element<E>> elements) {
             super(crdt);
             this.elements = elements;
         }
 
-        Set<Element<T>> getElements() {
+        Set<Element<E>> getElements() {
             return elements;
         }
 

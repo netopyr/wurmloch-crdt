@@ -1,61 +1,66 @@
 package com.netopyr.wurmloch.crdt;
 
 import com.netopyr.wurmloch.vectorclock.VectorClock;
-import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
+import io.reactivex.processors.ReplayProcessor;
 import javaslang.collection.Array;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
+import java.util.function.BiFunction;
 
-public class MVRegister<T> implements Crdt {
+public class MVRegister<T> extends AbstractCrdt<MVRegister<T>, MVRegister.SetCommand<T>> {
 
-    private final String nodeId;
-    private final String id;
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
-
+    // fields
     private Array<Entry<T>> entries = Array.empty();
 
-    public MVRegister(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        this.nodeId = Objects.requireNonNull(nodeId, "NodeId must not be null");
-        this.id = Objects.requireNonNull(id, "Id must not be null");
-        inCommands = Objects.requireNonNull(inCommands, "InCommands must not be null");
-        outCommands = Objects.requireNonNull(outCommands, "OutCommands must not be null");
-        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
-        commands.subscribe(outCommands);
+
+    // constructor
+    public MVRegister(String nodeId, String crdtId) {
+        super(nodeId, crdtId, ReplayProcessor.create());
     }
 
     @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+    public BiFunction<String, String, MVRegister<T>> getFactory() {
         return MVRegister::new;
     }
 
-    @Override
-    public String getId() {
-        return id;
+
+    // crdt
+    protected boolean processCommand(SetCommand<T> command) {
+        final Entry<T> newEntry = command.getEntry();
+        if (!entries.exists(entry -> entry.getClock().compareTo(newEntry.getClock()) > 0
+                || entry.getClock().equals(newEntry.getClock()))) {
+            final Array<Entry<T>> newEntries = entries
+                    .filter(entry -> entry.getClock().compareTo(newEntry.getClock()) == 0)
+                    .append(newEntry);
+            doSet(newEntries);
+            return true;
+        }
+        return false;
     }
 
+
+    // core functionality
     public Array<T> get() {
         return entries.map(Entry::getValue);
     }
 
     public void set(T newValue) {
-        if (entries.size() != 1 || ! Objects.equals(entries.head().getValue(), newValue)) {
+        if (entries.size() != 1 || !Objects.equals(entries.head().getValue(), newValue)) {
             final Entry<T> newEntry = new Entry<>(newValue, incVV());
             doSet(Array.of(newEntry));
             commands.onNext(new SetCommand<>(
-                    id,
+                    crdtId,
                     newEntry
             ));
         }
     }
 
+
+    // implementation
     private void doSet(Array<Entry<T>> newEntries) {
         entries = newEntries;
     }
@@ -64,21 +69,6 @@ public class MVRegister<T> implements Crdt {
         final Array<VectorClock> clocks = entries.map(Entry::getClock);
         final VectorClock mergedClock = clocks.reduceOption(VectorClock::merge).getOrElse(new VectorClock());
         return mergedClock.increment(nodeId);
-    }
-
-    @SuppressWarnings("unchecked")
-    private void processCommand(CrdtCommand command) {
-        if (command instanceof MVRegister.SetCommand) {
-            final Entry<T> newEntry = ((SetCommand<T>)command).getEntry();
-            if (entries.exists(entry -> entry.getClock().compareTo(newEntry.getClock()) > 0)) {
-                return;
-            }
-            final Array<Entry<T>> newEntries = entries
-                    .filter(entry -> entry.getClock().compareTo(newEntry.getClock()) == 0)
-                    .filter(entry -> ! entry.getClock().equals(newEntry.getClock()))
-                    .append(newEntry);
-            doSet(newEntries);
-        }
     }
 
 
@@ -131,7 +121,9 @@ public class MVRegister<T> implements Crdt {
         }
     }
 
-    static final class SetCommand<T> extends CrdtCommand {
+
+    // commands
+    public static final class SetCommand<T> extends CrdtCommand {
 
         private final Entry<T> entry;
 

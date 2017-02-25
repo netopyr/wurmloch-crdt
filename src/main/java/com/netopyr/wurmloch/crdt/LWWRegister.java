@@ -1,47 +1,47 @@
 package com.netopyr.wurmloch.crdt;
 
 import com.netopyr.wurmloch.vectorclock.StrictVectorClock;
-import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
+import io.reactivex.processors.BehaviorProcessor;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
-import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
 import java.util.Objects;
+import java.util.function.BiFunction;
 
-public class LWWRegister<T> implements Crdt {
+@SuppressWarnings("WeakerAccess")
+public class LWWRegister<T> extends AbstractCrdt<LWWRegister<T>, LWWRegister.SetCommand<T>> {
 
-    private final String id;
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
-
+    // fields
     private T value;
     private StrictVectorClock clock;
 
-    public LWWRegister(String nodeId, String id, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        this.id = Objects.requireNonNull(id, "Id must not be null");
-        Objects.requireNonNull(nodeId, "NodeId must not be null");
-        this.clock = new StrictVectorClock(nodeId);
 
-        inCommands = Objects.requireNonNull(inCommands, "InCommands must not be null");
-        outCommands = Objects.requireNonNull(outCommands, "OutCommands must not be null");
-        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
-        commands.subscribe(outCommands);
+    // constructor
+    public LWWRegister(String nodeId, String crdtId) {
+        super(nodeId, crdtId, BehaviorProcessor.create());
+        this.clock = new StrictVectorClock(nodeId);
     }
 
     @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+    public BiFunction<String, String, LWWRegister<T>> getFactory() {
         return LWWRegister::new;
     }
 
-    @Override
-    public String getId() {
-        return id;
+
+    // crdt
+    protected boolean processCommand(SetCommand<T> command) {
+        if (clock.compareTo(command.getClock()) < 0) {
+            clock = clock.merge(command.getClock());
+            doSet(command.getValue());
+            return true;
+        }
+        return false;
     }
 
+
+    // core functionality
     public T get() {
         return value;
     }
@@ -50,31 +50,23 @@ public class LWWRegister<T> implements Crdt {
         if (! Objects.equals(value, newValue)) {
             doSet(newValue);
             commands.onNext(new SetCommand<>(
-                    id,
+                    crdtId,
                     value,
                     clock
             ));
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private void processCommand(CrdtCommand command) {
-        final Class<? extends CrdtCommand> clazz = command.getClass();
-        if (SetCommand.class.equals(clazz)) {
-            final SetCommand<T> setCommand = (SetCommand<T>) command;
-            if (clock.compareTo(setCommand.getClock()) < 0) {
-                clock = clock.merge(setCommand.getClock());
-                doSet(setCommand.getValue());
-            }
-        }
-    }
 
+    // implementation
     private void doSet(T value) {
         this.value = value;
         clock = clock.increment();
     }
 
-    static final class SetCommand<T> extends CrdtCommand {
+
+    // commands
+    public static final class SetCommand<T> extends CrdtCommand {
 
         private final T value;
         private final StrictVectorClock clock;

@@ -1,38 +1,36 @@
 package com.netopyr.wurmloch.store;
 
-import com.netopyr.wurmloch.crdt.Crdt;
+import com.netopyr.wurmloch.crdt.AbstractCrdt;
 import com.netopyr.wurmloch.crdt.CrdtCommand;
 import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
-import org.reactivestreams.Processor;
-import org.reactivestreams.Publisher;
-import org.reactivestreams.Subscriber;
 
-class SimpleCrdt implements Crdt {
+import java.util.function.BiFunction;
 
-    private final String id;
-    private final transient Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
+class SimpleCrdt extends AbstractCrdt<SimpleCrdt, CrdtCommand> {
 
-    SimpleCrdt(String id, Subscriber<? super CrdtCommand> outCommands) {
-        this.id = id;
-        commands.subscribe(outCommands);
+    // constructor
+    SimpleCrdt(String crdtId) {
+        super("", crdtId, PublishProcessor.create());
     }
 
     @Override
-    public String getId() {
-        return id;
+    public BiFunction<String, String, SimpleCrdt> getFactory() {
+        return (nodeId, crtdId) -> new SimpleCrdt(crtdId);
     }
 
 
+    // crdt
     @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
-        return (replica, id, inCommands, outCommands) -> new SimpleCrdt(id, outCommands);
+    protected boolean processCommand(CrdtCommand command) {
+        return false;
     }
 
-    public void sendCommands(CrdtCommand... commands) {
+
+    // functionality
+    void sendCommands(CrdtCommand... commands) {
         for (final CrdtCommand command : commands) {
             this.commands.onNext(command);
         }
@@ -47,21 +45,21 @@ class SimpleCrdt implements Crdt {
         SimpleCrdt that = (SimpleCrdt) o;
 
         return new EqualsBuilder()
-                .append(id, that.id)
+                .append(crdtId, that.crdtId)
                 .isEquals();
     }
 
     @Override
     public int hashCode() {
         return new HashCodeBuilder(17, 37)
-                .append(id)
+                .append(crdtId)
                 .toHashCode();
     }
 
     @Override
     public String toString() {
         return new ToStringBuilder(this)
-                .append("id", id)
+                .append("crdtId", crdtId)
                 .toString();
     }
 }

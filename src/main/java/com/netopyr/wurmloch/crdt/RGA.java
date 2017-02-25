@@ -2,7 +2,6 @@ package com.netopyr.wurmloch.crdt;
 
 import com.netopyr.wurmloch.vectorclock.StrictVectorClock;
 import io.reactivex.processors.PublishProcessor;
-import javaslang.Function4;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import javaslang.control.Option;
@@ -16,11 +15,12 @@ import org.reactivestreams.Subscriber;
 
 import java.util.AbstractList;
 import java.util.Objects;
+import java.util.function.BiFunction;
 
-public class RGA<E> extends AbstractList<E> implements Crdt {
+public class RGA<E> extends AbstractList<E> implements Crdt<RGA<E>, RGA.RGACommand<E>> {
 
-    private final String crtdId;
-    private final Processor<CrdtCommand, CrdtCommand> commands = PublishProcessor.create();
+    private final String crdtId;
+    private final Processor<RGACommand<E>, RGACommand<E>> commands = PublishProcessor.create();
     private final Vertex<E> start;
 
     private Map<StrictVectorClock, Vertex<E>> vertices;
@@ -28,28 +28,71 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
     private StrictVectorClock clock;
     private int size;
 
-    public RGA(String nodeId, String crtdId, Publisher<? extends CrdtCommand> inCommands, Subscriber<? super CrdtCommand> outCommands) {
-        this.crtdId = Objects.requireNonNull(crtdId, "CrtdId must not be null");
+
+    // constructor
+    public RGA(String nodeId, String crdtId) {
+        this.crdtId = Objects.requireNonNull(crdtId, "CrtdId must not be null");
 
         Objects.requireNonNull(nodeId, "NodeId must not be null");
         this.clock = new StrictVectorClock(nodeId);
         this.start = new Vertex<>(null, clock);
         this.vertices = HashMap.of(clock, start);
-
-        inCommands.subscribe(new CrdtSubscriber(this::processCommand));
-        commands.subscribe(outCommands);
     }
 
     @Override
-    public String getId() {
-        return crtdId;
-    }
-
-    @Override
-    public Function4<String, String, Publisher<? extends CrdtCommand>, Subscriber<? super CrdtCommand>, Crdt> getFactory() {
+    public BiFunction<String, String, RGA<E>> getFactory() {
         return RGA::new;
     }
 
+
+    // crdt
+    @Override
+    public String getCrdtId() {
+        return crdtId;
+    }
+
+    @Override
+    public void subscribe(Subscriber<? super RGACommand<E>> subscriber) {
+        commands.subscribe(subscriber);
+    }
+
+    @Override
+    public void subscribeTo(Publisher<? extends RGACommand<E>> publisher) {
+        publisher.subscribe(new CrdtSubscriber<>(commands, this::processCommand));
+    }
+
+    @Override
+    public void connect(RGA<E> other) {
+        if (! Objects.equals(crdtId, other.getCrdtId())) {
+            throw new IllegalArgumentException("Ids do not match");
+        }
+        subscribeTo(other);
+        other.subscribeTo(this);
+    }
+
+    private boolean processCommand(RGACommand<E> command) {
+        if (command instanceof AddRightCommand) {
+            final AddRightCommand<E> addRightCommand = (AddRightCommand<E>) command;
+            if (findVertex(addRightCommand.newVertexClock).isEmpty()) {
+                final Option<Vertex<E>> anchor = findVertex(addRightCommand.anchorClock);
+                clock = clock.merge(addRightCommand.newVertexClock);
+                anchor.peek(
+                        vertex -> doAddRight(vertex, addRightCommand.newVertexValue, addRightCommand.newVertexClock)
+                );
+                return true;
+            }
+
+        } else if (command instanceof RemoveCommand) {
+            final StrictVectorClock removedClock = ((RemoveCommand) command).clock;
+            final Option<Vertex<E>> vertex = findVertex(removedClock);
+            return vertex.map(this::doRemove).getOrElse(false);
+        }
+
+        return false;
+    }
+
+
+    // core functionality
     @Override
     public E get(int index) {
         return findVertex(index).value;
@@ -76,6 +119,8 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
         return vertex.value;
     }
 
+
+    // implementation
     private Vertex<E> findVertex(int index) {
         if (index < 0 || index >= size) {
             throw new IndexOutOfBoundsException();
@@ -94,21 +139,23 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
     }
 
     private void prepareRemove(Vertex<E> vertex) {
-        commands.onNext(new RemoveCommand(crtdId, vertex.clock));
+        commands.onNext(new RemoveCommand<>(crdtId, vertex.clock));
         doRemove(vertex);
     }
 
-    private void doRemove(Vertex<E> vertex) {
+    private boolean doRemove(Vertex<E> vertex) {
         if (! vertex.removed) {
             vertex.removed = true;
             size--;
+            return true;
         }
+        return false;
     }
 
     private void prepareAddRight(Vertex<E> anchor, E value) {
         clock = clock.increment();
-        commands.onNext(new AddRightCommand<>(crtdId, anchor.clock, value, clock));
         doAddRight(anchor, value, clock);
+        commands.onNext(new AddRightCommand<>(crdtId, anchor.clock, value, clock));
     }
 
     private void doAddRight(Vertex<E> l, E value, StrictVectorClock clock) {
@@ -130,28 +177,7 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
         return edges.get(vertex);
     }
 
-    @SuppressWarnings("unchecked")
-    private void processCommand(CrdtCommand command) {
-        final Class<? extends CrdtCommand> clazz = command.getClass();
-        if (AddRightCommand.class.equals(clazz)) {
-
-            final AddRightCommand<E> addRightCommand = (AddRightCommand<E>) command;
-            final Option<Vertex<E>> anchor = findVertex(addRightCommand.anchorClock);
-            clock = clock.merge(addRightCommand.newVertexClock);
-            anchor.peek(
-                    vertex -> doAddRight(vertex, addRightCommand.newVertexValue, addRightCommand.newVertexClock)
-            );
-
-        } else if (RemoveCommand.class.equals(clazz)) {
-
-            final StrictVectorClock removedClock = ((RemoveCommand) command).clock;
-            final Option<Vertex<E>> vertex = findVertex(removedClock);
-            vertex.peek(this::doRemove);
-
-        }
-    }
-
-    static final class Vertex<E> {
+    private static final class Vertex<E> {
 
         private final E value;
         private final StrictVectorClock clock;
@@ -189,12 +215,21 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
         }
     }
 
-    static final class RemoveCommand extends CrdtCommand {
+
+    // commands
+    @SuppressWarnings({"WeakerAccess", "unused"})
+    public abstract static class RGACommand<E> extends CrdtCommand {
+        protected RGACommand(String crdtId) {
+            super(crdtId);
+        }
+    }
+
+    public static final class RemoveCommand<E> extends RGACommand<E> {
 
         private final StrictVectorClock clock;
 
-        private RemoveCommand(String crtdId, StrictVectorClock clock) {
-            super(crtdId);
+        private RemoveCommand(String crdtId, StrictVectorClock clock) {
+            super(crdtId);
             this.clock = clock;
         }
 
@@ -229,7 +264,7 @@ public class RGA<E> extends AbstractList<E> implements Crdt {
         }
     }
 
-    static final class AddRightCommand<E> extends CrdtCommand {
+    public static final class AddRightCommand<E> extends RGACommand<E> {
 
         private final StrictVectorClock anchorClock;
         private final E newVertexValue;

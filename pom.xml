@@ -4,6 +4,7 @@
     <groupId>com.netopyr.wurmloch</groupId>
     <artifactId>wurmloch-crdt</artifactId>
     <version>0.1.1-SNAPSHOT</version>
+    <packaging>jar</packaging>
 
     <name>Wurmloch CRDT</name>
     <description>Experimental CRDT-implementations for the JVM</description>
