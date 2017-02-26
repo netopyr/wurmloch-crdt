@@ -132,7 +132,7 @@ public class LocalORSetTest {
 
     }
 
-    @Test (enabled = false)
+    @Test
     public void shouldSynchronizeConcurrentDeletesOfSameElement() {
         // given:
         final String element = "Hello World";
@@ -157,7 +157,7 @@ public class LocalORSetTest {
         assertThat(orSet3, empty());
     }
 
-    @Test (enabled = false)
+    @Test
     public void shouldSynchronizeConcurrentDeletesOfDifferentElements() {
         // given:
         final String element1 = "Hello World";
@@ -184,7 +184,7 @@ public class LocalORSetTest {
         assertThat(orSet3, empty());
     }
 
-    @Test (enabled = false)
+    @Test
     public void shouldSynchronizeConcurrentAddAndDeleteDifferentElements() {
         // given:
         final String element1 = "Hello World";
@@ -228,7 +228,7 @@ public class LocalORSetTest {
         assertThat(orSet3, equalTo(orSet1));
     }
 
-    @Test (enabled = false)
+    @Test
     public void shouldSynchronizeConcurrentAddAndDeleteSameElement() {
         // given:
         final String element = "Hello World";
