@@ -9,7 +9,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 @SuppressWarnings("WeakerAccess")
 public class PNCounter extends AbstractCrdt<PNCounter, PNCounter.UpdateCommand> {
@@ -22,11 +21,6 @@ public class PNCounter extends AbstractCrdt<PNCounter, PNCounter.UpdateCommand> 
     // constructor
     public PNCounter(String nodeId, String crtdId) {
         super(nodeId, crtdId, BehaviorProcessor.create());
-    }
-
-    @Override
-    public BiFunction<String, String, PNCounter> getFactory() {
-        return PNCounter::new;
     }
 
 

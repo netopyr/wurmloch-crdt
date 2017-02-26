@@ -1,6 +1,7 @@
 package com.netopyr.wurmloch.crdt;
 
-import io.reactivex.processors.PublishProcessor;
+import io.reactivex.Flowable;
+import io.reactivex.processors.ReplayProcessor;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -16,7 +17,6 @@ import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.function.BiFunction;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -26,17 +26,12 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
     private final String crdtId;
     private final Set<Element<E>> elements = new HashSet<>();
     private final Set<Element<E>> tombstone = new HashSet<>();
-    private final Processor<ORSetCommand<E>, ORSetCommand<E>> commands = PublishProcessor.create();
+    private final Processor<ORSetCommand<E>, ORSetCommand<E>> commands = ReplayProcessor.create();
 
 
     // constructor
     public ORSet(String crdtId) {
         this.crdtId = Objects.requireNonNull(crdtId, "Id must not be null");
-    }
-
-    @Override
-    public BiFunction<String, String, ORSet<E>> getFactory() {
-        return (nodeId, crdtId) -> new ORSet<>(crdtId);
     }
 
 
@@ -53,7 +48,7 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
 
     @Override
     public void subscribeTo(Publisher<? extends ORSetCommand<E>> publisher) {
-        publisher.subscribe(new CrdtSubscriber<>(commands, this::processCommand));
+        Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(new CrdtSubscriber<>(commands, this::processCommand));
     }
 
     @Override
@@ -114,7 +109,7 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
     }
 
     private synchronized boolean doAdd(Element<E> element) {
-        return elements.add(element) || elements.removeAll(tombstone);
+        return (elements.add(element) | elements.removeAll(tombstone)) && (! tombstone.contains(element));
     }
 
     private synchronized void prepareRemove(E value) {
@@ -124,7 +119,7 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
     }
 
     private synchronized boolean doRemove(Collection<Element<E>> removes) {
-        return elements.removeAll(removes) || tombstone.addAll(removes);
+        return elements.removeAll(removes) | tombstone.addAll(removes);
     }
 
     private class ORSetIterator implements Iterator<E> {

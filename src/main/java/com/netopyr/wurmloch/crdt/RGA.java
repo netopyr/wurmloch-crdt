@@ -1,7 +1,8 @@
 package com.netopyr.wurmloch.crdt;
 
 import com.netopyr.wurmloch.vectorclock.StrictVectorClock;
-import io.reactivex.processors.PublishProcessor;
+import io.reactivex.Flowable;
+import io.reactivex.processors.ReplayProcessor;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
 import javaslang.control.Option;
@@ -15,12 +16,11 @@ import org.reactivestreams.Subscriber;
 
 import java.util.AbstractList;
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 public class RGA<E> extends AbstractList<E> implements Crdt<RGA<E>, RGA.RGACommand<E>> {
 
     private final String crdtId;
-    private final Processor<RGACommand<E>, RGACommand<E>> commands = PublishProcessor.create();
+    private final Processor<RGACommand<E>, RGACommand<E>> commands = ReplayProcessor.create();
     private final Vertex<E> start;
 
     private Map<StrictVectorClock, Vertex<E>> vertices;
@@ -39,11 +39,6 @@ public class RGA<E> extends AbstractList<E> implements Crdt<RGA<E>, RGA.RGAComma
         this.vertices = HashMap.of(clock, start);
     }
 
-    @Override
-    public BiFunction<String, String, RGA<E>> getFactory() {
-        return RGA::new;
-    }
-
 
     // crdt
     @Override
@@ -58,7 +53,11 @@ public class RGA<E> extends AbstractList<E> implements Crdt<RGA<E>, RGA.RGAComma
 
     @Override
     public void subscribeTo(Publisher<? extends RGACommand<E>> publisher) {
-        publisher.subscribe(new CrdtSubscriber<>(commands, this::processCommand));
+        Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(command -> {
+            if (processCommand(command)) {
+                commands.onNext(command);
+            }
+        });
     }
 
     @Override

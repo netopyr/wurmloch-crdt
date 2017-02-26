@@ -1,6 +1,7 @@
 package com.netopyr.wurmloch.crdt;
 
-import io.reactivex.processors.BehaviorProcessor;
+import io.reactivex.Flowable;
+import io.reactivex.processors.ReplayProcessor;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -14,7 +15,6 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.BiFunction;
 
 @SuppressWarnings("WeakerAccess")
 public class GSet<E> extends AbstractSet<E> implements Crdt<GSet<E>, GSet.AddCommand<E>> {
@@ -22,17 +22,12 @@ public class GSet<E> extends AbstractSet<E> implements Crdt<GSet<E>, GSet.AddCom
     // fields
     private final String crdtId;
     private final Set<E> elements = new HashSet<>();
-    private final Processor<AddCommand<E>, AddCommand<E>> commands = BehaviorProcessor.create();
+    private final Processor<AddCommand<E>, AddCommand<E>> commands = ReplayProcessor.create();
 
 
     // constructor
     public GSet(String crdtId) {
         this.crdtId = Objects.requireNonNull(crdtId, "Id must not be null");
-    }
-
-    @Override
-    public BiFunction<String, String, GSet<E>> getFactory() {
-        return (nodeId, crdtId) -> new GSet<>(crdtId);
     }
 
 
@@ -49,7 +44,11 @@ public class GSet<E> extends AbstractSet<E> implements Crdt<GSet<E>, GSet.AddCom
 
     @Override
     public void subscribeTo(Publisher<? extends AddCommand<E>> publisher) {
-        publisher.subscribe(new CrdtSubscriber<>(commands, this::processCommand));
+        Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(command -> {
+            if (processCommand(command)) {
+                commands.onNext(command);
+            }
+        });
     }
 
     @Override

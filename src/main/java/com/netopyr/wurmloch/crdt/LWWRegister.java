@@ -8,7 +8,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 @SuppressWarnings("WeakerAccess")
 public class LWWRegister<T> extends AbstractCrdt<LWWRegister<T>, LWWRegister.SetCommand<T>> {
@@ -22,11 +21,6 @@ public class LWWRegister<T> extends AbstractCrdt<LWWRegister<T>, LWWRegister.Set
     public LWWRegister(String nodeId, String crdtId) {
         super(nodeId, crdtId, BehaviorProcessor.create());
         this.clock = new StrictVectorClock(nodeId);
-    }
-
-    @Override
-    public BiFunction<String, String, LWWRegister<T>> getFactory() {
-        return LWWRegister::new;
     }
 
 

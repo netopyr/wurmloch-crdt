@@ -9,7 +9,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 @SuppressWarnings("WeakerAccess")
 public class GCounter extends AbstractCrdt<GCounter, GCounter.UpdateCommand> {
@@ -21,11 +20,6 @@ public class GCounter extends AbstractCrdt<GCounter, GCounter.UpdateCommand> {
     // constructor
     public GCounter(String nodeId, String crdtId) {
         super(nodeId, crdtId, BehaviorProcessor.create());
-    }
-
-    @Override
-    public BiFunction<String, String, GCounter> getFactory() {
-        return GCounter::new;
     }
 
 

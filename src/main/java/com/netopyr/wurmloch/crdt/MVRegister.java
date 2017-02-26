@@ -9,7 +9,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 import org.apache.commons.lang3.builder.ToStringStyle;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 
 public class MVRegister<T> extends AbstractCrdt<MVRegister<T>, MVRegister.SetCommand<T>> {
 
@@ -20,11 +19,6 @@ public class MVRegister<T> extends AbstractCrdt<MVRegister<T>, MVRegister.SetCom
     // constructor
     public MVRegister(String nodeId, String crdtId) {
         super(nodeId, crdtId, ReplayProcessor.create());
-    }
-
-    @Override
-    public BiFunction<String, String, MVRegister<T>> getFactory() {
-        return MVRegister::new;
     }
 
 
