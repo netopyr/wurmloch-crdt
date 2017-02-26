@@ -42,19 +42,20 @@ public class LocalCrdtStore extends CrdtStore {
 
     private class LocalCrdtStoreSubscriber extends CrdtStoreSubscriber implements Disposable {
 
-        private final Processor<CrdtCommand, CrdtCommand> cancelProcessor = BehaviorProcessor.create();
+        private final Processor<Boolean, Boolean> cancelProcessor = BehaviorProcessor.create();
         private boolean connected = true;
 
         @Override
         public void onNext(CrdtDefinition definition) {
-            final Flowable<CrdtCommand> publisher = Flowable.merge(definition.getPublisher(), cancelProcessor);
+            final Flowable<? extends CrdtCommand> publisher = Flowable.fromPublisher(definition.getPublisher()).takeUntil(cancelProcessor);
             final CrdtDefinition mappedDefinition = new CrdtDefinition(definition.getCrdtId(), definition.getCrdtClass(), publisher);
             super.onNext(mappedDefinition);
         }
 
         @Override
         public void dispose() {
-            cancelProcessor.onError(new RuntimeException("LocalCrdtStores were disconnected"));
+            cancelProcessor.onNext(true);
+            cancelProcessor.onComplete();
 
             connected = false;
         }
