@@ -60,15 +60,6 @@ public class RGA<E> extends AbstractList<E> implements Crdt<RGA<E>, RGA.RGAComma
         });
     }
 
-    @Override
-    public void connect(RGA<E> other) {
-        if (! Objects.equals(crdtId, other.getCrdtId())) {
-            throw new IllegalArgumentException("Ids do not match");
-        }
-        subscribeTo(other);
-        other.subscribeTo(this);
-    }
-
     private boolean processCommand(RGACommand<E> command) {
         if (command instanceof AddRightCommand) {
             final AddRightCommand<E> addRightCommand = (AddRightCommand<E>) command;

@@ -65,7 +65,8 @@ public class GCounterTest {
 
         // when
         final GCounter counter2 = new GCounter(NODE_ID_2, CRDT_ID);
-        counter1.connect(counter2);
+        counter1.subscribeTo(counter2);
+        counter2.subscribeTo(counter1);
 
         // then
         assertThat(counter2.get(), is(42L));
@@ -138,7 +139,8 @@ public class GCounterTest {
         counter1.subscribe(outCommands1);
         final GCounter counter2 = new GCounter(NODE_ID_2, CRDT_ID);
         counter2.subscribe(outCommands2);
-        counter1.connect(counter2);
+        counter1.subscribeTo(counter2);
+        counter2.subscribeTo(counter1);
 
         // when
         counter1.increment();

@@ -51,15 +51,6 @@ public class GSet<E> extends AbstractSet<E> implements Crdt<GSet<E>, GSet.AddCom
         });
     }
 
-    @Override
-    public void connect(GSet<E> other) {
-        if (! Objects.equals(crdtId, other.getCrdtId())) {
-            throw new IllegalArgumentException("Ids do not match");
-        }
-        subscribeTo(other);
-        other.subscribeTo(this);
-    }
-
     private boolean processCommand(AddCommand<E> command) {
         return doAdd(command.getElement());
     }

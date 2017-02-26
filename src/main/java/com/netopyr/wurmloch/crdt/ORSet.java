@@ -51,15 +51,6 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
         Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(new CrdtSubscriber<>(commands, this::processCommand));
     }
 
-    @Override
-    public void connect(ORSet<E> other) {
-        if (! Objects.equals(crdtId, other.getCrdtId())) {
-            throw new IllegalArgumentException("Ids do not match");
-        }
-        subscribeTo(other);
-        other.subscribeTo(this);
-    }
-
     private boolean processCommand(ORSetCommand<E> command) {
         if (command instanceof AddCommand) {
             return doAdd(((AddCommand<E>)command).getElement());

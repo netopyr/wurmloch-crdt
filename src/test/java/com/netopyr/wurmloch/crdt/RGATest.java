@@ -60,7 +60,8 @@ public class RGATest {
         // given
         final RGA<String> rga1 = new RGA<>(NODE_ID_1, CRDT_ID);
         final RGA<String> rga2 = new RGA<>(NODE_ID_2, CRDT_ID);
-        rga1.connect(rga2);
+        rga1.subscribeTo(rga2);
+        rga2.subscribeTo(rga1);
 
         // when
         rga1.add(0, "A");
@@ -117,7 +118,8 @@ public class RGATest {
         // given
         final RGA<String> rga1 = new RGA<>(NODE_ID_1, CRDT_ID);
         final RGA<String> rga2 = new RGA<>(NODE_ID_2, CRDT_ID);
-        rga1.connect(rga2);
+        rga1.subscribeTo(rga2);
+        rga2.subscribeTo(rga1);
         rga1.addAll(Arrays.asList("B2", "C2", "C1", "B1", "A", "D1", "D2"));
 
         // when

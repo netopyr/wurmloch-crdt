@@ -77,7 +77,8 @@ public class PNCounterTest {
         final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID);
 
         // when
-        counter1.connect(counter2);
+        counter1.subscribeTo(counter2);
+        counter2.subscribeTo(counter1);
 
         // then
         assertThat(counter2.get(), is(42L));
@@ -155,7 +156,8 @@ public class PNCounterTest {
         // given
         final PNCounter counter1 = new PNCounter(NODE_ID_1, CRDT_ID);
         final PNCounter counter2 = new PNCounter(NODE_ID_2, CRDT_ID);
-        counter1.connect(counter2);
+        counter1.subscribeTo(counter2);
+        counter2.subscribeTo(counter1);
 
         // when
         counter1.increment();

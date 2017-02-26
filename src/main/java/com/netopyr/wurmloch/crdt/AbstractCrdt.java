@@ -44,15 +44,6 @@ public abstract class AbstractCrdt<TYPE extends AbstractCrdt<TYPE, COMMAND>, COM
         });
     }
 
-    @Override
-    public void connect(TYPE other) {
-        if (!Objects.equals(crdtId, other.getCrdtId())) {
-            throw new IllegalArgumentException("Ids do not match");
-        }
-        subscribeTo(other);
-        other.subscribeTo(this);
-    }
-
     protected abstract boolean processCommand(COMMAND command);
 
 }

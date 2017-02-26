@@ -8,6 +8,4 @@ public interface Crdt<TYPE extends Crdt<TYPE, COMMAND>, COMMAND extends CrdtComm
 
     void subscribeTo(Publisher<? extends COMMAND> publisher);
 
-    void connect(TYPE other);
-
 }

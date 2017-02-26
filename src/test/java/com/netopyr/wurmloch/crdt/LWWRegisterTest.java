@@ -54,7 +54,8 @@ public class LWWRegisterTest {
         final LWWRegister<String> register2 = new LWWRegister<>(NODE_ID_2, CRDT_ID);
 
         // when
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
 
         // then
         assertThat(register2.get(), is("Hello World"));
@@ -134,7 +135,8 @@ public class LWWRegisterTest {
         // given
         final LWWRegister<String> register1 = new LWWRegister<>(NODE_ID_1, CRDT_ID);
         final LWWRegister<String> register2 = new LWWRegister<>(NODE_ID_2, CRDT_ID);
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
 
         // when
         register1.set("Hello World");
@@ -161,7 +163,8 @@ public class LWWRegisterTest {
         register1.subscribe(outCommands1);
         final LWWRegister<String> register2 = new LWWRegister<>(NODE_ID_2, CRDT_ID);
         register2.subscribe(outCommands2);
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
         final LWWRegister<String> register3 = new LWWRegister<>(NODE_ID_3, CRDT_ID);
         register3.subscribeTo(inCommands3);
 
@@ -188,7 +191,8 @@ public class LWWRegisterTest {
         // when
         register1.set("Hello World");
         register2.set("Goodbye World");
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
 
         // then
         assertThat(register1.get(), is("Goodbye World"));

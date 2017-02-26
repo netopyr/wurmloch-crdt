@@ -56,7 +56,8 @@ public class MVRegisterTest {
         final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
 
         // when
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
 
         // then
         assertThat(register2.get(), contains("Hello World"));
@@ -136,7 +137,8 @@ public class MVRegisterTest {
         // given
         final MVRegister<String> register1 = new MVRegister<>(NODE_ID_1, CRDT_ID);
         final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
 
         // when
         register1.set("Hello World");
@@ -162,7 +164,8 @@ public class MVRegisterTest {
         register1.subscribe(outCommands1);
         final MVRegister<String> register2 = new MVRegister<>(NODE_ID_2, CRDT_ID);
         register2.subscribe(outCommands2);
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
         final MVRegister<String> register3 = new MVRegister<>(NODE_ID_3, CRDT_ID);
         register3.subscribeTo(inCommands3);
 
@@ -189,7 +192,8 @@ public class MVRegisterTest {
         // when
         register1.set("Hello World");
         register2.set("Goodbye World");
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
 
         // then
         assertThat(register1.get(), containsInAnyOrder("Hello World", "Goodbye World"));
@@ -205,7 +209,8 @@ public class MVRegisterTest {
 
         register1.set("Hello World");
         register2.set("Goodbye World");
-        register1.connect(register2);
+        register1.subscribeTo(register2);
+        register2.subscribeTo(register1);
 
         // when
         register1.set("42");
