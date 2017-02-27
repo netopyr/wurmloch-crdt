@@ -1,7 +1,7 @@
 package com.netopyr.wurmloch.integration;
 
 import com.netopyr.wurmloch.crdt.ORSet;
-import com.netopyr.wurmloch.store.LocalCrdtStore;
+import com.netopyr.wurmloch.store.CrdtStore;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -12,8 +12,8 @@ import static org.hamcrest.Matchers.equalTo;
 
 public class LocalORSetTest {
 
-    private LocalCrdtStore replica2;
-    private LocalCrdtStore replica3;
+    private CrdtStore replica2;
+    private CrdtStore replica3;
 
     private ORSet<String> orSet1;
     private ORSet<String> orSet2;
@@ -23,9 +23,9 @@ public class LocalORSetTest {
     @BeforeMethod
     public void setUp() {
         final String ID = "TestORSet";
-        final LocalCrdtStore replica1 = new LocalCrdtStore("ID_1");
-        replica2 = new LocalCrdtStore("ID_2");
-        replica3 = new LocalCrdtStore("ID_3");
+        final CrdtStore replica1 = new CrdtStore("ID_1");
+        replica2 = new CrdtStore("ID_2");
+        replica3 = new CrdtStore("ID_3");
 
         replica1.connect(replica2);
         replica2.connect(replica3);

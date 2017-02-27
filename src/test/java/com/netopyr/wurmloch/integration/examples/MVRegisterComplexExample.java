@@ -1,7 +1,7 @@
 package com.netopyr.wurmloch.integration.examples;
 
 import com.netopyr.wurmloch.crdt.MVRegister;
-import com.netopyr.wurmloch.store.LocalCrdtStore;
+import com.netopyr.wurmloch.store.CrdtStore;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -13,9 +13,9 @@ public class MVRegisterComplexExample {
     public void runMVRegisterComplexExample() {
 
         // create three LocalCrdtStores and connect them
-        final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
-        final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
-        final LocalCrdtStore crdtStore3 = new LocalCrdtStore();
+        final CrdtStore crdtStore1 = new CrdtStore();
+        final CrdtStore crdtStore2 = new CrdtStore();
+        final CrdtStore crdtStore3 = new CrdtStore();
         crdtStore2.connect(crdtStore1);
         crdtStore2.connect(crdtStore3);
 

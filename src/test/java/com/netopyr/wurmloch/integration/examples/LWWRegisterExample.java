@@ -1,7 +1,7 @@
 package com.netopyr.wurmloch.integration.examples;
 
 import com.netopyr.wurmloch.crdt.LWWRegister;
-import com.netopyr.wurmloch.store.LocalCrdtStore;
+import com.netopyr.wurmloch.store.CrdtStore;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -13,8 +13,8 @@ public class LWWRegisterExample {
     public void runLWWRegisterExample() {
 
         // create two LocalCrdtStores and connect them
-        final LocalCrdtStore crdtStore1 = new LocalCrdtStore("N_1");
-        final LocalCrdtStore crdtStore2 = new LocalCrdtStore("N_2");
+        final CrdtStore crdtStore1 = new CrdtStore("N_1");
+        final CrdtStore crdtStore2 = new CrdtStore("N_2");
         crdtStore1.connect(crdtStore2);
 
         // create an LWW-Register and find the according replica in the second store

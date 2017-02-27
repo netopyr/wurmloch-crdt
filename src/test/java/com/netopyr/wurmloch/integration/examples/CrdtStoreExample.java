@@ -1,6 +1,6 @@
 package com.netopyr.wurmloch.integration.examples;
 
-import com.netopyr.wurmloch.store.LocalCrdtStore;
+import com.netopyr.wurmloch.store.CrdtStore;
 import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
@@ -11,8 +11,8 @@ public class CrdtStoreExample {
     @Test
     public void runCrdtStoreExample() {
         // create two LocalCrdtStores
-        final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
-        final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+        final CrdtStore crdtStore1 = new CrdtStore();
+        final CrdtStore crdtStore2 = new CrdtStore();
 
         // create a new G-Set
         crdtStore1.createGSet("ID_1");

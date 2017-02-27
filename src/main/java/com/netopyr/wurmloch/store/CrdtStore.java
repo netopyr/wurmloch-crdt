@@ -10,6 +10,7 @@ import com.netopyr.wurmloch.crdt.ORSet;
 import com.netopyr.wurmloch.crdt.PNCounter;
 import com.netopyr.wurmloch.crdt.RGA;
 import io.reactivex.Flowable;
+import io.reactivex.processors.BehaviorProcessor;
 import io.reactivex.processors.ReplayProcessor;
 import io.reactivex.subscribers.DefaultSubscriber;
 import javaslang.collection.HashMap;
@@ -29,6 +30,7 @@ public class CrdtStore implements Publisher<CrdtDefinition> {
     // fields
     private final String nodeId;
     private final Processor<CrdtDefinition, CrdtDefinition> definitions = ReplayProcessor.create();
+    private Map<CrdtStore, CrdtStoreSubscriber> subscribers = HashMap.empty();
 
     private Map<String, Crdt> crdts = HashMap.empty();
     private Map<Class<? extends Crdt>, BiFunction<String, String, ? extends Crdt>> factories = HashMap.empty();
@@ -208,12 +210,6 @@ public class CrdtStore implements Publisher<CrdtDefinition> {
 
     // implementation
     @SuppressWarnings("unchecked")
-    private void connect(CrdtStore that) {
-        this.subscribeTo(that);
-        that.subscribeTo(this);
-    }
-
-    @SuppressWarnings("unchecked")
     private void register(Crdt crdt) {
         crdts = crdts.put(crdt.getCrdtId(), crdt);
         definitions.onNext(new CrdtDefinition(crdt.getCrdtId(), crdt.getClass(), crdt));
@@ -230,22 +226,43 @@ public class CrdtStore implements Publisher<CrdtDefinition> {
         Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(new CrdtStoreSubscriber());
     }
 
+    public void connect(CrdtStore other) {
+        if (!subscribers.containsKey(other)) {
+            final CrdtStoreSubscriber subscriber = new CrdtStoreSubscriber();
+            other.subscribe(subscriber);
+            subscribers = subscribers.put(other, subscriber);
+            other.connect(this);
+        }
+    }
+
+    public void disconnect(CrdtStore other) {
+        subscribers.get(other).peek(
+                subscriber -> {
+                    subscriber.dispose();
+                    subscribers = subscribers.remove(other);
+                    other.disconnect(this);
+                }
+        );
+    }
 
     protected class CrdtStoreSubscriber extends DefaultSubscriber<CrdtDefinition> {
+
+        private final Processor<Boolean, Boolean> cancelProcessor = BehaviorProcessor.create();
 
         @SuppressWarnings("unchecked")
         @Override
         public void onNext(CrdtDefinition definition) {
             final String crdtId = definition.getCrdtId();
+            final Flowable<? extends CrdtCommand> publisher = Flowable.fromPublisher(definition.getPublisher()).takeUntil(cancelProcessor);
             final Option<? extends Crdt> existingCrdt = findCrdt(crdtId);
             if (existingCrdt.isDefined()) {
-                existingCrdt.get().subscribeTo(definition.getPublisher());
+                existingCrdt.get().subscribeTo(publisher);
             } else {
                 final Class<? extends Crdt> crdtClass = definition.getCrdtClass();
                 factories.get(crdtClass)
                         .map(factory -> factory.apply(nodeId, crdtId))
                         .peek(CrdtStore.this::register)
-                        .peek(crdt -> crdt.subscribeTo(definition.getPublisher()));
+                        .peek(crdt -> crdt.subscribeTo(publisher));
             }
         }
 
@@ -257,6 +274,11 @@ public class CrdtStore implements Publisher<CrdtDefinition> {
         @Override
         public void onComplete() {
             cancel();
+        }
+
+        public void dispose() {
+            cancelProcessor.onNext(true);
+            cancelProcessor.onComplete();
         }
     }
 }

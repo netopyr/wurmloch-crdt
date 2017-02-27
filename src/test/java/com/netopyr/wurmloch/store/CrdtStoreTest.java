@@ -10,7 +10,7 @@ import org.testng.annotations.Test;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
-public class LocalCrdtStoreTest {
+public class CrdtStoreTest {
     
     private static final String NODE_ID_1 = "N_1";
     private static final String NODE_ID_2 = "N_2";
@@ -20,7 +20,7 @@ public class LocalCrdtStoreTest {
     @Test
     public void shouldFindCrdts() {
         // given:
-        final LocalCrdtStore store = new LocalCrdtStore();
+        final CrdtStore store = new CrdtStore();
         store.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
 
         // when:
@@ -40,9 +40,9 @@ public class LocalCrdtStoreTest {
     @Test
     public void shouldAddCrdtWhileConnected() {
         // given:
-        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final CrdtStore store1 = new CrdtStore();
         store1.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
-        final LocalCrdtStore store2 = new LocalCrdtStore();
+        final CrdtStore store2 = new CrdtStore();
         store2.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
         store1.connect(store2);
 
@@ -62,9 +62,9 @@ public class LocalCrdtStoreTest {
     @Test
     public void shouldAddCrdtAfterConnect() {
         // given:
-        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final CrdtStore store1 = new CrdtStore();
         store1.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
-        final LocalCrdtStore store2 = new LocalCrdtStore();
+        final CrdtStore store2 = new CrdtStore();
         store2.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
         final SimpleCrdt crdt1 = store1.createCrdt(SimpleCrdt.class, NODE_ID_1);
         final SimpleCrdt crdt2 = store2.createCrdt(SimpleCrdt.class, NODE_ID_2);
@@ -84,9 +84,9 @@ public class LocalCrdtStoreTest {
     @Test
     public void shouldNotAddExistingCrdtAfterConnect() {
         // given:
-        final LocalCrdtStore store1 = new LocalCrdtStore();
+        final CrdtStore store1 = new CrdtStore();
         store1.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
-        final LocalCrdtStore store2 = new LocalCrdtStore();
+        final CrdtStore store2 = new CrdtStore();
         store2.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
         store1.connect(store2);
         final SimpleCrdt crdt1 = store1.createCrdt(SimpleCrdt.class, NODE_ID_1);
@@ -105,12 +105,12 @@ public class LocalCrdtStoreTest {
     @SuppressWarnings("unchecked")
     public void shouldSendCommandsToConnectedStore() {
         // given:
-        final LocalCrdtStore store1 = new LocalCrdtStore(NODE_ID_1);
+        final CrdtStore store1 = new CrdtStore(NODE_ID_1);
         store1.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
         final TestSubscriber<CrdtDefinition> store1Subscriber = TestSubscriber.create();
         store1.subscribe(store1Subscriber);
 
-        final LocalCrdtStore store2 = new LocalCrdtStore(NODE_ID_2);
+        final CrdtStore store2 = new CrdtStore(NODE_ID_2);
         store2.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
         final TestSubscriber<CrdtDefinition> store2Subscriber = TestSubscriber.create();
         store2.subscribe(store2Subscriber);
@@ -183,12 +183,12 @@ public class LocalCrdtStoreTest {
     @SuppressWarnings("unchecked")
     public void shouldSendAllCommandsAfterConnect() {
         // given:
-        final LocalCrdtStore store1 = new LocalCrdtStore(NODE_ID_1);
+        final CrdtStore store1 = new CrdtStore(NODE_ID_1);
         store1.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
         final TestSubscriber<CrdtDefinition> store1Subscriber = TestSubscriber.create();
         store1.subscribe(store1Subscriber);
 
-        final LocalCrdtStore store2 = new LocalCrdtStore(NODE_ID_2);
+        final CrdtStore store2 = new CrdtStore(NODE_ID_2);
         store2.registerFactory(SimpleCrdt.class, SimpleCrdt::new);
         final TestSubscriber<CrdtDefinition> store2Subscriber = TestSubscriber.create();
         store2.subscribe(store2Subscriber);

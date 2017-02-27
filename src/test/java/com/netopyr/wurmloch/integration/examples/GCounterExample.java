@@ -1,7 +1,7 @@
 package com.netopyr.wurmloch.integration.examples;
 
 import com.netopyr.wurmloch.crdt.GCounter;
-import com.netopyr.wurmloch.store.LocalCrdtStore;
+import com.netopyr.wurmloch.store.CrdtStore;
 import org.hamcrest.MatcherAssert;
 import org.testng.annotations.Test;
 
@@ -13,8 +13,8 @@ public class GCounterExample {
     public void runGCounterExample() {
 
         // create two LocalCrdtStores and connect them
-        final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
-        final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
+        final CrdtStore crdtStore1 = new CrdtStore();
+        final CrdtStore crdtStore2 = new CrdtStore();
         crdtStore1.connect(crdtStore2);
 
         // create a G-Counter and find the according replica in the second store
