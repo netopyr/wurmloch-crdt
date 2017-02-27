@@ -503,12 +503,12 @@ _Code Sample 9: Using an RGA (see [RGAExample][class rgaexample])_
 [crdt article]: http://hal.upmc.fr/file/index/docid/555588/filename/techreport.pdf
 [wiki vectorclock]: https://en.wikipedia.org/wiki/Vector_clocks
 
-[class crdtstoreexample]: src/main/java/com/netopyr/wurmloch/examples/CrdtStoreExample.java
-[class gsetexample]: src/main/java/com/netopyr/wurmloch/examples/GSetExample.java
-[class gcounterexample]: src/main/java/com/netopyr/wurmloch/examples/GCounterExample.java
-[class pncounterexample]: src/main/java/com/netopyr/wurmloch/examples/PNCounterExample.java
-[class lwwregisterexample]: src/main/java/com/netopyr/wurmloch/examples/LWWRegisterExample.java
-[class mvregisterexample]: src/main/java/com/netopyr/wurmloch/examples/MVRegisterExample.java
-[class mvregistercomplexexample]: src/main/java/com/netopyr/wurmloch/examples/MVRegisterComplexExample.java
-[class orsetexample]: src/main/java/com/netopyr/wurmloch/examples/ORSetExample.java
-[class rgaexample]: src/main/java/com/netopyr/wurmloch/examples/RGAExample.java
+[class crdtstoreexample]: src/test/java/com/netopyr/wurmloch/integration/examples/CrdtStoreExample.java
+[class gsetexample]: src/test/java/com/netopyr/wurmloch/integration/examples/GSetExample.java
+[class gcounterexample]: src/test/java/com/netopyr/wurmloch/integration/examples/GCounterExample.java
+[class pncounterexample]: src/test/java/com/netopyr/wurmloch/integration/examples/PNCounterExample.java
+[class lwwregisterexample]: src/test/java/com/netopyr/wurmloch/integration/examples/LWWRegisterExample.java
+[class mvregisterexample]: src/test/java/com/netopyr/wurmloch/integration/examples/MVRegisterExample.java
+[class mvregistercomplexexample]: src/test/java/com/netopyr/wurmloch/integration/examples/MVRegisterComplexExample.java
+[class orsetexample]: src/test/java/com/netopyr/wurmloch/integration/examples/ORSetExample.java
+[class rgaexample]: src/test/java/com/netopyr/wurmloch/integration/examples/RGAExample.java

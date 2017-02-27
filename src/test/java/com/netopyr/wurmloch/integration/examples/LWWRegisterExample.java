@@ -1,14 +1,16 @@
-package com.netopyr.wurmloch.examples;
+package com.netopyr.wurmloch.integration.examples;
 
 import com.netopyr.wurmloch.crdt.LWWRegister;
 import com.netopyr.wurmloch.store.LocalCrdtStore;
+import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 public class LWWRegisterExample {
 
-    public static void main(String[] args) {
+    @Test
+    public void runLWWRegisterExample() {
 
         // create two LocalCrdtStores and connect them
         final LocalCrdtStore crdtStore1 = new LocalCrdtStore("N_1");

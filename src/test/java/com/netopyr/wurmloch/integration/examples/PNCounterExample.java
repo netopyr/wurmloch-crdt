@@ -1,14 +1,16 @@
-package com.netopyr.wurmloch.examples;
+package com.netopyr.wurmloch.integration.examples;
 
 import com.netopyr.wurmloch.crdt.PNCounter;
 import com.netopyr.wurmloch.store.LocalCrdtStore;
 import org.hamcrest.MatcherAssert;
+import org.testng.annotations.Test;
 
 import static org.hamcrest.Matchers.is;
 
 public class PNCounterExample {
 
-    public static void main(String[] args) {
+    @Test
+    public void runPNCounterExample() {
 
         // create two LocalCrdtStores and connect them
         final LocalCrdtStore crdtStore1 = new LocalCrdtStore();

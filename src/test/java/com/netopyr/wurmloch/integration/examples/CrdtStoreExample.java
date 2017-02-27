@@ -1,14 +1,15 @@
-package com.netopyr.wurmloch.examples;
+package com.netopyr.wurmloch.integration.examples;
 
 import com.netopyr.wurmloch.store.LocalCrdtStore;
+import org.testng.annotations.Test;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.is;
 
 public class CrdtStoreExample {
 
-    @SuppressWarnings("unchecked")
-    public static void main(String[] args) {
+    @Test
+    public void runCrdtStoreExample() {
         // create two LocalCrdtStores
         final LocalCrdtStore crdtStore1 = new LocalCrdtStore();
         final LocalCrdtStore crdtStore2 = new LocalCrdtStore();
