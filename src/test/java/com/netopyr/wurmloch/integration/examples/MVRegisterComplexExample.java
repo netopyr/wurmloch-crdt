@@ -12,7 +12,7 @@ public class MVRegisterComplexExample {
     @Test
     public void runMVRegisterComplexExample() {
 
-        // create three LocalCrdtStores and connect them
+        // create three CrdtStores and connect them
         final CrdtStore crdtStore1 = new CrdtStore();
         final CrdtStore crdtStore2 = new CrdtStore();
         final CrdtStore crdtStore3 = new CrdtStore();

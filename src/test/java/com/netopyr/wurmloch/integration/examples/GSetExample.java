@@ -12,7 +12,7 @@ public class GSetExample {
     @Test
     public void runGSetExample() {
 
-        // create two LocalCrdtStores and connect them
+        // create two CrdtStores and connect them
         final CrdtStore crdtStore1 = new CrdtStore();
         final CrdtStore crdtStore2 = new CrdtStore();
         crdtStore1.connect(crdtStore2);

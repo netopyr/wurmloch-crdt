@@ -12,7 +12,7 @@ public class LWWRegisterExample {
     @Test
     public void runLWWRegisterExample() {
 
-        // create two LocalCrdtStores and connect them
+        // create two CrdtStores and connect them
         final CrdtStore crdtStore1 = new CrdtStore("N_1");
         final CrdtStore crdtStore2 = new CrdtStore("N_2");
         crdtStore1.connect(crdtStore2);
