@@ -54,13 +54,12 @@ public class RGA<E> extends AbstractList<E> implements Crdt<RGA<E>, RGA.RGAComma
     @Override
     public void subscribeTo(Publisher<? extends RGACommand<E>> publisher) {
         Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(command -> {
-            if (processCommand(command)) {
-                commands.onNext(command);
-            }
+            final Option<RGACommand<E>> newCommand = processCommand(command);
+            newCommand.peek(commands::onNext);
         });
     }
 
-    private boolean processCommand(RGACommand<E> command) {
+    private Option<RGACommand<E>> processCommand(RGACommand<E> command) {
         if (command instanceof AddRightCommand) {
             final AddRightCommand<E> addRightCommand = (AddRightCommand<E>) command;
             if (findVertex(addRightCommand.newVertexClock).isEmpty()) {
@@ -69,16 +68,16 @@ public class RGA<E> extends AbstractList<E> implements Crdt<RGA<E>, RGA.RGAComma
                 anchor.peek(
                         vertex -> doAddRight(vertex, addRightCommand.newVertexValue, addRightCommand.newVertexClock)
                 );
-                return true;
+                return Option.of(command);
             }
 
         } else if (command instanceof RemoveCommand) {
             final StrictVectorClock removedClock = ((RemoveCommand) command).clock;
             final Option<Vertex<E>> vertex = findVertex(removedClock);
-            return vertex.map(this::doRemove).getOrElse(false);
+            return vertex.map(this::doRemove).flatMap(result -> result? Option.of(command) : Option.none());
         }
 
-        return false;
+        return Option.none();
     }
 
 

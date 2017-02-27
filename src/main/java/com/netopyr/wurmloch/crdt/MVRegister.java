@@ -3,6 +3,7 @@ package com.netopyr.wurmloch.crdt;
 import com.netopyr.wurmloch.vectorclock.VectorClock;
 import io.reactivex.processors.ReplayProcessor;
 import javaslang.collection.Array;
+import javaslang.control.Option;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -23,7 +24,7 @@ public class MVRegister<T> extends AbstractCrdt<MVRegister<T>, MVRegister.SetCom
 
 
     // crdt
-    protected boolean processCommand(SetCommand<T> command) {
+    protected Option<SetCommand<T>> processCommand(SetCommand<T> command) {
         final Entry<T> newEntry = command.getEntry();
         if (!entries.exists(entry -> entry.getClock().compareTo(newEntry.getClock()) > 0
                 || entry.getClock().equals(newEntry.getClock()))) {
@@ -31,9 +32,9 @@ public class MVRegister<T> extends AbstractCrdt<MVRegister<T>, MVRegister.SetCom
                     .filter(entry -> entry.getClock().compareTo(newEntry.getClock()) == 0)
                     .append(newEntry);
             doSet(newEntries);
-            return true;
+            return Option.of(command);
         }
-        return false;
+        return Option.none();
     }
 
 

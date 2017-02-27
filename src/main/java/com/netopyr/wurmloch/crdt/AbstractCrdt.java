@@ -1,6 +1,7 @@
 package com.netopyr.wurmloch.crdt;
 
 import io.reactivex.Flowable;
+import javaslang.control.Option;
 import org.reactivestreams.Processor;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
@@ -38,12 +39,11 @@ public abstract class AbstractCrdt<TYPE extends AbstractCrdt<TYPE, COMMAND>, COM
     @Override
     public void subscribeTo(Publisher<? extends COMMAND> publisher) {
         Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(command -> {
-            if (processCommand(command)) {
-                commands.onNext(command);
-            }
+            final Option<? extends COMMAND> newCommand = processCommand(command);
+            newCommand.peek(commands::onNext);
         });
     }
 
-    protected abstract boolean processCommand(COMMAND command);
+    protected abstract Option<? extends COMMAND> processCommand(COMMAND command);
 
 }

@@ -2,6 +2,7 @@ package com.netopyr.wurmloch.crdt;
 
 import io.reactivex.Flowable;
 import io.reactivex.processors.ReplayProcessor;
+import javaslang.control.Option;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -45,14 +46,13 @@ public class GSet<E> extends AbstractSet<E> implements Crdt<GSet<E>, GSet.AddCom
     @Override
     public void subscribeTo(Publisher<? extends AddCommand<E>> publisher) {
         Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(command -> {
-            if (processCommand(command)) {
-                commands.onNext(command);
-            }
+            final Option<AddCommand<E>> newCommand = processCommand(command);
+            newCommand.peek(commands::onNext);
         });
     }
 
-    private boolean processCommand(AddCommand<E> command) {
-        return doAdd(command.getElement());
+    private Option<AddCommand<E>> processCommand(AddCommand<E> command) {
+        return doAdd(command.getElement())? Option.of(command) : Option.none();
     }
 
 

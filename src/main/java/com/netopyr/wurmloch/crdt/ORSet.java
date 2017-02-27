@@ -2,6 +2,7 @@ package com.netopyr.wurmloch.crdt;
 
 import io.reactivex.Flowable;
 import io.reactivex.processors.ReplayProcessor;
+import javaslang.control.Option;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -48,16 +49,20 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
 
     @Override
     public void subscribeTo(Publisher<? extends ORSetCommand<E>> publisher) {
-        Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(new CrdtSubscriber<>(commands, this::processCommand));
+        Flowable.fromPublisher(publisher).onTerminateDetach().subscribe(command -> {
+            final Option<ORSetCommand<E>> newCommand = processCommand(command);
+            newCommand.peek(commands::onNext);
+
+        });
     }
 
-    private boolean processCommand(ORSetCommand<E> command) {
+    private Option<ORSetCommand<E>> processCommand(ORSetCommand<E> command) {
         if (command instanceof AddCommand) {
-            return doAdd(((AddCommand<E>)command).getElement());
+            return doAdd(((AddCommand<E>) command).getElement())? Option.of(command) : Option.none();
         } else if (command instanceof RemoveCommand) {
-            return doRemove(((RemoveCommand<E>)command).getElements());
+            return doRemove(((RemoveCommand<E>) command).getElements())? Option.of(command) : Option.none();
         }
-        return false;
+        return Option.none();
     }
 
 
@@ -76,7 +81,7 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
     public boolean add(E value) {
         final boolean contained = doContains(value);
         prepareAdd(value);
-        return ! contained;
+        return !contained;
     }
 
 
@@ -100,7 +105,7 @@ public class ORSet<E> extends AbstractSet<E> implements Crdt<ORSet<E>, ORSet.ORS
     }
 
     private synchronized boolean doAdd(Element<E> element) {
-        return (elements.add(element) | elements.removeAll(tombstone)) && (! tombstone.contains(element));
+        return (elements.add(element) | elements.removeAll(tombstone)) && (!tombstone.contains(element));
     }
 
     private synchronized void prepareRemove(E value) {

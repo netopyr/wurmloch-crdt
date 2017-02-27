@@ -3,6 +3,7 @@ package com.netopyr.wurmloch.store;
 import com.netopyr.wurmloch.crdt.AbstractCrdt;
 import com.netopyr.wurmloch.crdt.CrdtCommand;
 import io.reactivex.processors.ReplayProcessor;
+import javaslang.control.Option;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -20,8 +21,8 @@ class SimpleCrdt extends AbstractCrdt<SimpleCrdt, CrdtCommand> {
 
     // crdt
     @Override
-    protected boolean processCommand(CrdtCommand command) {
-        return ! Objects.equals(((SimpleCommand) command).getNodeId(), nodeId);
+    protected Option<CrdtCommand> processCommand(CrdtCommand command) {
+        return Objects.equals(((SimpleCommand) command).getNodeId(), nodeId)? Option.none() : Option.of(command);
     }
 
 

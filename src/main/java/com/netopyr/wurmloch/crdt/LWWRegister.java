@@ -2,6 +2,7 @@ package com.netopyr.wurmloch.crdt;
 
 import com.netopyr.wurmloch.vectorclock.StrictVectorClock;
 import io.reactivex.processors.BehaviorProcessor;
+import javaslang.control.Option;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -25,13 +26,13 @@ public class LWWRegister<T> extends AbstractCrdt<LWWRegister<T>, LWWRegister.Set
 
 
     // crdt
-    protected boolean processCommand(SetCommand<T> command) {
+    protected Option<SetCommand<T>> processCommand(SetCommand<T> command) {
         if (clock.compareTo(command.getClock()) < 0) {
             clock = clock.merge(command.getClock());
             doSet(command.getValue());
-            return true;
+            return Option.of(command);
         }
-        return false;
+        return Option.none();
     }
 
 

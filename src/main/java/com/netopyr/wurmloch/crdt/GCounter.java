@@ -3,6 +3,7 @@ package com.netopyr.wurmloch.crdt;
 import io.reactivex.processors.BehaviorProcessor;
 import javaslang.collection.HashMap;
 import javaslang.collection.Map;
+import javaslang.control.Option;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -25,10 +26,10 @@ public class GCounter extends AbstractCrdt<GCounter, GCounter.UpdateCommand> {
 
     // crdt
     @Override
-    protected boolean processCommand(UpdateCommand command) {
+    protected Option<UpdateCommand> processCommand(UpdateCommand command) {
         final Map<String, Long> oldEntries = entries;
         entries = entries.merge(command.entries, Math::max);
-        return ! entries.equals(oldEntries);
+        return entries.equals(oldEntries)? Option.none() : Option.of(new UpdateCommand(crdtId, entries));
     }
 
 
