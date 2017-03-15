@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
@@ -99,7 +100,7 @@ public class ORSetTest {
         while (it2.hasNext()) {
             results.add(it2.next());
         }
-        assertThat(results, contains("1", "2", "3"));
+        assertThat(results, containsInAnyOrder("1", "2", "3"));
     }
 
     @Test

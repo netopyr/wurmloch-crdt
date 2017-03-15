@@ -125,7 +125,7 @@ public class MVRegisterTest {
         // then
         subscriber.assertNotComplete();
         subscriber.assertNoErrors();
-        assertThat(subscriber.values(), containsInAnyOrder(
+        assertThat(subscriber.values(), contains(
                 new SetCommandMatcher<>(CRDT_ID, "Hello World"),
                 new SetCommandMatcher<>(CRDT_ID, "Goodbye World")
         ));
